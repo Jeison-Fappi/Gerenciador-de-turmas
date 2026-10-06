@@ -2,8 +2,7 @@
 // PÁGINA DE GRÁFICOS - lê os alunos do localStorage
 // ==========================================================
 
-carregarDados();
-const dados = alunos.map((a) => ({ ...a, faltas: faltasDoAluno(a) }));
+let dados = [];
 const COR = { regular: "#2fa77a", atencao: "#e0a800", risco: "#b42338", marca: "#0095da", apagado: "#c9dbe6" };
 const graficos = {};
 let turmaAtual = "TODAS";
@@ -107,6 +106,10 @@ function renderizar() {
 }
 
 // ---------- Início ----------
+(async () => {
+if (!(await exigirLogin())) return;
+await carregarDados();
+dados = alunos.map((a) => ({ ...a, faltas: faltasDoAluno(a) }));
 if (typeof Chart === "undefined") {
   mostrarAviso("Não foi possível carregar a biblioteca de gráficos. Verifique a conexão com a internet e recarregue a página.");
 } else if (dados.length === 0) {
@@ -119,3 +122,4 @@ if (typeof Chart === "undefined") {
   desenharChips();
   renderizar();
 }
+})();

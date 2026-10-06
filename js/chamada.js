@@ -4,8 +4,6 @@
 
 const $ = (s) => document.querySelector(s);
 
-carregarDados();
-
 let dia = dataISO();
 let turma = turmas[0];
 
@@ -74,15 +72,18 @@ $("#listaChamada").addEventListener("click", (e) => {
   if (!b) return;
   const id = b.parentElement.dataset.id;
   const novo = b.dataset.st;
-  marcarStatus(id, dia, statusDoDia(id, dia) === novo ? "" : novo);
+  marcarStatus(id, dia, statusDoDia(id, dia) === novo ? "" : novo).catch(falhaSalvar);
   render();
 });
 
 function marcarRestante() {
-  alunos.filter((a) => a.turma === turma).forEach((a) => {
-    if (!statusDoDia(a.id, dia)) marcarStatus(a.id, dia, "P");
-  });
+  const ids = alunos.filter((a) => a.turma === turma && !statusDoDia(a.id, dia)).map((a) => a.id);
+  marcarVarios(ids, dia, "P").catch(falhaSalvar);
   render();
 }
 
-render();
+(async () => {
+  if (!(await exigirLogin())) return;
+  await carregarDados();
+  render();
+})();

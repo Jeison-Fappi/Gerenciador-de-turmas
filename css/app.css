@@ -158,3 +158,23 @@ h1,h2,strong,.side-brand{font-family:'Sora','Manrope',sans-serif}
 .legenda{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;color:var(--muted);font-size:13px;font-weight:600}
 .legenda i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-1px}
 @media(max-width:575px){.cal-dia{min-height:54px;padding:6px}.cal-dia .tag{display:none}.cal-week,.cal-grid{gap:4px}}
+
+/* Usuário logado (menu lateral) */
+.side-user{margin-top:auto;display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#a9c3d4;padding:0 6px}
+.side-user span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-user button{background:rgba(255,255,255,.08);border:0;color:#fff;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;display:flex;gap:8px;align-items:center;font-family:'Manrope',sans-serif}
+.side-user button:hover{background:rgba(255,255,255,.16)}
+@media(max-width:991px){.side-user{margin-top:0;flex-direction:row;align-items:center}.side-user span{display:none}}
+
+/* Aviso de importação */
+.banner{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px;background:var(--sky);border:1px solid #b9dcf0;border-radius:14px;padding:16px 20px;margin-bottom:20px}
+.banner strong{display:block;font-size:15px}
+.banner span{color:var(--muted);font-size:14px}
+
+/* Login */
+.login-body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--ink)}
+.login-card{width:100%;max-width:400px;background:#fff;border-radius:18px;padding:34px 30px}
+.login-card img{border-radius:10px;margin-bottom:18px}
+.login-card h1{font-size:22px;font-weight:700;margin:0 0 6px}
+.login-card p{color:var(--muted);margin:0 0 22px;font-size:14px}
+.login-erro{background:var(--risk-bg);color:var(--risk);border-radius:10px;padding:10px 12px;font-size:13.5px;font-weight:600;margin-bottom:14px}

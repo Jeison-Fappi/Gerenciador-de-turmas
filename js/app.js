@@ -97,7 +97,7 @@ function atualizarSistema() {
 });
 
 // ---------- Cadastro ----------
-function cadastrarAluno() {
+async function cadastrarAluno() {
   const modal = $("#modalNovo");
   const inputNome = $("#nomeAluno");
   const inputTurma = $("#turmaAluno");
@@ -109,8 +109,12 @@ function cadastrarAluno() {
   if (alunos.some((a) => a.nome.toLowerCase() === nome.toLowerCase()))
     return erroCampo(inputNome, "Esse aluno já está cadastrado.");
 
-  alunos.push({ id: crypto.randomUUID(), nome, turma: inputTurma.value, faltasAnteriores: 0 });
-  salvarDados();
+  try {
+    await criarAluno(nome, inputTurma.value);
+  } catch (e) {
+    if (e && e.code === "23505") return erroCampo(inputNome, "Esse aluno já está cadastrado.");
+    return falhaSalvar(e);
+  }
   atualizarSistema();
 
   inputNome.value = "";
@@ -135,7 +139,7 @@ function abrirEdicao(id) {
   bootstrap.Modal.getOrCreateInstance($("#modalEditar")).show();
 }
 
-function salvarEdicao() {
+async function salvarEdicao() {
   const nome = $("#editarNome").value.trim();
   const turma = $("#editarTurma").value;
   limparErros($("#modalEditar"));
@@ -146,7 +150,12 @@ function salvarEdicao() {
   alunoEditando.nome = nome;
   alunoEditando.turma = turma;
   alunoEditando.faltasAnteriores = Math.max(0, parseInt($("#editarFaltasAnt").value) || 0);
-  salvarDados();
+  try {
+    await atualizarAluno(alunoEditando);
+  } catch (e) {
+    if (e && e.code === "23505") return erroCampo($("#editarNome"), "Já existe um aluno com esse nome.");
+    return falhaSalvar(e);
+  }
   atualizarSistema();
   bootstrap.Modal.getInstance($("#modalEditar")).hide();
   toast("success", "Aluno atualizado");
@@ -164,11 +173,13 @@ function excluirAluno(id) {
     confirmButtonText: "Excluir",
     cancelButtonText: "Cancelar",
     confirmButtonColor: "#b42338",
-  }).then((r) => {
+  }).then(async (r) => {
     if (r.isConfirmed) {
-      alunos = alunos.filter((x) => x.id !== id);
-      removerPresencasDoAluno(id);
-      salvarDados();
+      try {
+        await removerAluno(id);
+      } catch (e) {
+        return falhaSalvar(e);
+      }
       atualizarSistema();
       toast("success", "Aluno removido");
     }
@@ -197,5 +208,44 @@ $("#pesquisa").addEventListener("input", aplicarFiltros);
 $("#filtroTurma").addEventListener("change", aplicarFiltros);
 
 // ---------- Início ----------
-carregarDados();
-atualizarSistema();
+function verificarImportacao() {
+  const antigos = JSON.parse(localStorage.getItem("alunos") || "[]");
+  if (antigos.length && !localStorage.getItem("importado_ok")) {
+    $("#qtdImportar").innerText = antigos.length;
+    $("#bannerImportar").classList.remove("d-none");
+  }
+}
+
+function dispensarImportacao() {
+  localStorage.setItem("importado_ok", "1");
+  $("#bannerImportar").classList.add("d-none");
+}
+
+async function importarAgora() {
+  const btn = $("#btnImportar");
+  btn.disabled = true;
+  btn.innerText = "Importando...";
+  try {
+    const r = await importarDoNavegador();
+    localStorage.setItem("importado_ok", "1");
+    $("#bannerImportar").classList.add("d-none");
+    await carregarDados();
+    atualizarSistema();
+    toast("success", `Importado: ${r.alunos} aluno(s) e ${r.presencas} registro(s) de chamada`);
+  } catch (e) {
+    falhaSalvar(e);
+    btn.disabled = false;
+    btn.innerText = "Importar";
+  }
+}
+
+(async () => {
+  if (!(await exigirLogin())) return;
+  try {
+    await carregarDados();
+  } catch (e) {
+    return falhaSalvar(e);
+  }
+  atualizarSistema();
+  verificarImportacao();
+})();

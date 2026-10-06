@@ -6,29 +6,15 @@ const $ = (s) => document.querySelector(s);
 const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const TAGS = { P: "Presente", F: "Falta", J: "Justif." };
 
-carregarDados();
-
 const alunoId = new URLSearchParams(location.search).get("id");
-const aluno = alunos.find((a) => a.id === alunoId);
+let aluno = null;
 let ref = new Date();
 ref.setDate(1);
 
-// ---------- Observações (mesma estrutura de antes) ----------
-const lerObs = () => JSON.parse(localStorage.getItem("observacoes") || "{}");
-
-function salvarObs(data, texto) {
-  const todas = lerObs();
-  if (!todas[alunoId]) todas[alunoId] = {};
-  if (texto.trim() === "") delete todas[alunoId][data];
-  else todas[alunoId][data] = texto.trim();
-  localStorage.setItem("observacoes", JSON.stringify(todas));
-}
-
-// ---------- Tela ----------
 function renderizar() {
   const ano = ref.getFullYear();
   const mes = ref.getMonth();
-  const obs = lerObs()[alunoId] || {};
+  const obs = obsDoAluno(alunoId);
   const hoje = dataISO();
   const primeiro = new Date(ano, mes, 1).getDay();
   const total = new Date(ano, mes + 1, 0).getDate();
@@ -47,10 +33,11 @@ function renderizar() {
   }
   $("#calGrid").innerHTML = html;
 
-  $("#kFaltas").innerText = faltasDoAluno(aluno);
+  const f = faltasDoAluno(aluno);
+  $("#kFaltas").innerText = f;
   $("#kJust").innerText = justificadasDoAluno(aluno);
   $("#kObs").innerText = Object.keys(obs).length;
-  $("#kFaltas").parentElement.classList.toggle("has", faltasDoAluno(aluno) > 0);
+  $("#kFaltas").parentElement.classList.toggle("has", f > 0);
 }
 
 function mudarMes(n) {
@@ -61,7 +48,7 @@ function mudarMes(n) {
 function abrirDia(ds) {
   const [y, m, d] = ds.split("-").map(Number);
   let st = statusDoDia(alunoId, ds);
-  const obsAtual = (lerObs()[alunoId] || {})[ds] || "";
+  const obsAtual = obsDoAluno(alunoId)[ds] || "";
   const b = (s, ic, t) => `<button type="button" class="${s} ${st === s ? "on" : ""}" data-st="${s}"><i class="bi bi-${ic}"></i> ${t}</button>`;
 
   Swal.fire({
@@ -82,20 +69,30 @@ function abrirDia(ds) {
       });
     },
     preConfirm: () => document.getElementById("obsDia").value,
-  }).then((r) => {
+  }).then(async (r) => {
     if (!r.isConfirmed) return;
-    marcarStatus(alunoId, ds, st);
-    salvarObs(ds, r.value || "");
+    try {
+      await marcarStatus(alunoId, ds, st);
+      await salvarObs(alunoId, ds, r.value || "");
+    } catch (e) {
+      falhaSalvar(e);
+    }
     renderizar();
   });
 }
 
-if (!aluno) {
-  $("#nomeAluno").innerText = "Aluno não encontrado";
-  $("#calGrid").innerHTML = '<p class="text-muted">Volte ao painel e abra o calendário de um aluno.</p>';
-} else {
+(async () => {
+  if (!(await exigirLogin())) return;
+  await carregarDados();
+  aluno = alunos.find((a) => a.id === alunoId);
+
+  if (!aluno) {
+    $("#nomeAluno").innerText = "Aluno não encontrado";
+    $("#calGrid").innerHTML = '<p class="text-muted">Volte ao painel e abra o calendário de um aluno.</p>';
+    return;
+  }
   $("#avatarAluno").innerText = iniciais(aluno.nome);
   $("#nomeAluno").innerText = aluno.nome;
   $("#turmaAluno").innerText = aluno.turma;
   renderizar();
-}
+})();
