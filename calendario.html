@@ -2,121 +2,72 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Calendário de Observações</title>
-
-    <!-- Bootstrap -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-
-    <!-- Bootstrap Icons -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
-    />
-
-    <!-- CSS -->
-    <link rel="stylesheet" href="css/style.css" />
-    <link rel="stylesheet" href="css/calendario.css" />
+    <title>Calendário do aluno - Gerenciador de Turmas</title>
+    <link rel="icon" href="img/logo.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/app.css" />
   </head>
-
   <body>
-    <div class="container py-5">
-      <!-- ========================================= -->
-      <!-- VOLTAR -->
-      <!-- ========================================= -->
-
-      <div class="mb-4">
-        <a href="index.html" class="btn btn-outline-dark">
-          <i class="bi bi-arrow-left"></i>
-          Voltar para a lista
+    <div class="shell">
+      <aside class="side">
+        <a class="side-brand" href="index.html">
+          <img src="img/logo.png" width="38" height="38" alt="Residência" />
+          <span>Gerenciador<br />de Turmas</span>
         </a>
-      </div>
+        <nav class="side-nav">
+          <a class="nav-i on" href="index.html"><i class="bi bi-grid-1x2-fill"></i> Painel</a>
+          <a class="nav-i" href="chamada.html"><i class="bi bi-clipboard2-check-fill"></i> Chamada</a>
+          <a class="nav-i" href="graficos.html"><i class="bi bi-bar-chart-line-fill"></i> Gráficos</a>
+        </nav>
+      <div class="side-user"><span id="userEmail"></span><button onclick="sair()"><i class="bi bi-box-arrow-right"></i> Sair</button></div>
+      </aside>
 
-      <!-- ========================================= -->
-      <!-- CABEÇALHO DO ALUNO -->
-      <!-- ========================================= -->
+      <main class="main">
+        <a class="btn-ghost mb-3" href="index.html"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
 
-      <div class="card shadow border-0 mb-4">
-        <div class="card-body text-center">
-          <i class="bi bi-person-circle fs-1 text-primary"></i>
-
-          <h3 id="nomeAlunoCalendario" class="mt-2 mb-0">Carregando...</h3>
-
-          <p class="text-muted mb-0" id="turmaAlunoCalendario"></p>
-        </div>
-      </div>
-
-      <!-- ========================================= -->
-      <!-- CALENDÁRIO -->
-      <!-- ========================================= -->
-
-      <div class="card shadow border-0">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <button
-              class="btn btn-primary btn-sm"
-              onclick="mudarMes(-1)"
-              title="Mês anterior"
-            >
-              <i class="bi bi-chevron-left"></i>
-            </button>
-
-            <h4 id="mesAnoAtual" class="mb-0 text-capitalize"></h4>
-
-            <button
-              class="btn btn-primary btn-sm"
-              onclick="mudarMes(1)"
-              title="Próximo mês"
-            >
-              <i class="bi bi-chevron-right"></i>
-            </button>
+        <section class="card-x cal-aluno">
+          <span class="avatar" id="avatarAluno">?</span>
+          <div>
+            <h2 id="nomeAluno">Carregando...</h2>
+            <span class="chip" id="turmaAluno"></span>
           </div>
+          <button class="btn-blue ms-auto" onclick="abrirRelatorio()"><i class="bi bi-file-earmark-pdf-fill"></i> Baixar relatório</button>
+        </section>
 
-          <div class="calendario-semana">
-            <div>Dom</div>
-            <div>Seg</div>
-            <div>Ter</div>
-            <div>Qua</div>
-            <div>Qui</div>
-            <div>Sex</div>
-            <div>Sáb</div>
+        <section class="strip" style="grid-template-columns:repeat(3,1fr)">
+          <div class="risk"><small><span class="dot dot-risk"></span> Faltas</small><strong id="kFaltas">0</strong></div>
+          <div class="warn"><small><span class="dot dot-warn"></span> Justificadas</small><strong id="kJust">0</strong></div>
+          <div><small><i class="bi bi-chat-left-text-fill"></i> Observações</small><strong id="kObs">0</strong></div>
+        </section>
+
+        <section class="card-x pad mt">
+          <div class="cal-nav">
+            <button class="ibtn" onclick="mudarMes(-1)" title="Mês anterior"><i class="bi bi-chevron-left"></i></button>
+            <h2 id="mesAno"></h2>
+            <button class="ibtn" onclick="mudarMes(1)" title="Próximo mês"><i class="bi bi-chevron-right"></i></button>
           </div>
-
-          <div id="calendarioGrid" class="calendario-grid">
-            <!-- Preenchido via JavaScript -->
+          <div class="cal-week"><div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div></div>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="legenda">
+            <span><i style="background:var(--ok-bg);border:1px solid #bfe5d6"></i>Presente</span>
+            <span><i style="background:var(--risk-bg);border:1px solid #f5bcc5"></i>Falta</span>
+            <span><i style="background:var(--warn-bg);border:1px solid #f3dc92"></i>Justificada</span>
+            <span><i class="bi bi-chat-left-text-fill" style="width:auto;color:var(--blue-dark)"></i>Tem observação</span>
           </div>
-
-          <div class="calendario-legenda mt-4">
-            <span class="legenda-item">
-              <span class="legenda-bolinha legenda-vermelha"></span>
-              Dia com observação
-            </span>
-
-            <span class="legenda-item">
-              <span class="legenda-bolinha legenda-hoje"></span>
-              Hoje
-            </span>
-          </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
 
-    <!-- ========================================= -->
-    <!-- SCRIPTS -->
-    <!-- ========================================= -->
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- SweetAlert -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- JavaScript -->
-    <script src="js/calendario.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/dados.js"></script>
+    <script src="js/relatorio.js"></script>
+    <script src="js/calendario-page.js"></script>
   </body>
 </html>

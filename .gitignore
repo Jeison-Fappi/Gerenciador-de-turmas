@@ -1,0 +1,22 @@
+# Segredos: nunca versionar
+.env
+.env.*
+*.pem
+*service_role*
+*secret*key*
+
+# Dados dos alunos exportados (relatórios, backups, planilhas)
+relatorio-*.pdf
+*.csv
+*.xlsx
+backup*.json
+
+# Dependências e arquivos gerados
+node_modules/
+dist/
+*.log
+
+# Sistema operacional e editor
+.DS_Store
+Thumbs.db
+.idea/
