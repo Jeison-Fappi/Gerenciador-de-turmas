@@ -55,7 +55,7 @@ function abrirDia(ds) {
     title: `${String(d).padStart(2, "0")} de ${meses[m - 1]} de ${y}`,
     html: `
       <div class="seg mb-3" id="segDia">${b("P", "check-lg", "Presente")}${b("F", "x-lg", "Falta")}${b("J", "file-earmark-check", "Justificada")}</div>
-      <textarea id="obsDia" class="form-control" rows="4" placeholder="Observação sobre o aluno neste dia...">${esc(obsAtual)}</textarea>`,
+      <textarea id="obsDia" class="form-control" rows="4" maxlength="2000" placeholder="Observação sobre o aluno neste dia...">${esc(obsAtual)}</textarea>`,
     showCancelButton: true,
     confirmButtonText: "Salvar",
     cancelButtonText: "Cancelar",

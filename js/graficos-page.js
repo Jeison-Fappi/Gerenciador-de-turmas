@@ -1,6 +1,4 @@
-// ==========================================================
-// PÁGINA DE GRÁFICOS - lê os alunos do localStorage
-// ==========================================================
+// PÁGINA DE GRÁFICOS
 
 let dados = [];
 const COR = { regular: "#2fa77a", atencao: "#e0a800", risco: "#b42338", marca: "#0095da", apagado: "#c9dbe6" };
@@ -46,7 +44,7 @@ function renderizar() {
   document.getElementById("kRisco").innerText = risco;
   document.getElementById("kRisco").parentElement.classList.toggle("has", risco > 0);
 
-  // 1) Faltas por turma
+  //Faltas por turma
   const porTurma = {};
   turmas.forEach((t) => (porTurma[t] = 0));
   dados.forEach((a) => (porTurma[a.turma] = (porTurma[a.turma] || 0) + a.faltas));
@@ -69,7 +67,7 @@ function renderizar() {
     },
   });
 
-  // 2) Situação dos alunos
+  //Situação dos alunos
   const c = { regular: 0, atencao: 0, risco: 0 };
   lista.forEach((a) => c[situacao(a.faltas)]++);
 
@@ -82,7 +80,7 @@ function renderizar() {
     options: { cutout: "62%", plugins: { legend: { position: "bottom", labels: { usePointStyle: true, padding: 16 } } } },
   });
 
-  // 3) Faltas por aluno
+  //Faltas por aluno
   const ordenados = [...lista].sort((a, b) => b.faltas - a.faltas);
   document.getElementById("boxAlunos").style.height = Math.max(240, ordenados.length * 40 + 50) + "px";
 

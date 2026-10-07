@@ -1,7 +1,4 @@
-// ==========================================================
 // RELATÓRIO EM PDF DO ALUNO (jsPDF + jsPDF-AutoTable)
-// Depende de dados.js: presencas, obsDoAluno, faltasDoAluno
-// ==========================================================
 
 const REL = {
   navy: [6, 40, 61], blue: [0, 149, 218], ok: [47, 167, 122], risk: [180, 35, 56],
@@ -333,7 +330,7 @@ async function relatorioLogo() {
       r.readAsDataURL(blob);
     });
   } catch (e) {
-    relLogoCache = null; // sem logo, o relatório sai igual
+    relLogoCache = null; 
   }
   return relLogoCache;
 }

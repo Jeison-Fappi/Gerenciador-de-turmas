@@ -166,7 +166,7 @@ function excluirAluno(id) {
   const a = alunos.find((x) => x.id === id);
 
   Swal.fire({
-    title: `Excluir ${a.nome}?`,
+    title: `Excluir ${esc(a.nome)}?`,
     text: "Essa ação não pode ser desfeita.",
     icon: "warning",
     showCancelButton: true,

@@ -1,16 +1,13 @@
-// ==========================================================
 // DADOS COMPARTILHADOS (Supabase)
-// Carrega tudo para a memória uma vez; leituras são imediatas
-// e as gravações vão para o banco.
-// ==========================================================
+
 
 const configurado = !SUPABASE_URL.includes("COLE_AQUI");
 const sb = configurado ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 let usuarioEmail = "";
 let alunos = [];
-let presencas = {}; // { "2026-10-06": { idAluno: "P" | "F" | "J" } }
-let observacoes = {}; // { idAluno: { "2026-10-06": "texto" } }
+let presencas = {}; 
+let observacoes = {}; 
 
 // ---------- Login ----------
 async function exigirLogin() {
@@ -97,7 +94,7 @@ async function atualizarAluno(a) {
 }
 
 async function removerAluno(id) {
-  const { error } = await sb.from("alunos").delete().eq("id", id); // presenças e observações saem junto (cascade)
+  const { error } = await sb.from("alunos").delete().eq("id", id); 
   if (error) throw error;
   alunos = alunos.filter((a) => a.id !== id);
   for (const dia in presencas) {
@@ -119,7 +116,7 @@ function aplicarNoCache(alunoId, data, status) {
   if (Object.keys(presencas[data]).length === 0) delete presencas[data];
 }
 
-// Atualiza a memória na hora (a tela responde rápido) e grava no banco em seguida
+// Atualiza a memória na hora e grava no banco em seguida
 async function marcarStatus(alunoId, data, status) {
   aplicarNoCache(alunoId, data, status);
   const q = sb.from("presencas");
