@@ -7,6 +7,7 @@
 const configurado = !SUPABASE_URL.includes("COLE_AQUI");
 const sb = configurado ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
+let usuarioEmail = "";
 let alunos = [];
 let presencas = {}; // { "2026-10-06": { idAluno: "P" | "F" | "J" } }
 let observacoes = {}; // { idAluno: { "2026-10-06": "texto" } }
@@ -23,6 +24,7 @@ async function exigirLogin() {
     location.href = "login.html";
     return false;
   }
+  usuarioEmail = data.session.user.email;
   const el = document.getElementById("userEmail");
   if (el) el.innerText = data.session.user.email;
   return true;

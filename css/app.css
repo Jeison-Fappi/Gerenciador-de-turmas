@@ -178,3 +178,8 @@ h1,h2,strong,.side-brand{font-family:'Sora','Manrope',sans-serif}
 .login-card h1{font-size:22px;font-weight:700;margin:0 0 6px}
 .login-card p{color:var(--muted);margin:0 0 22px;font-size:14px}
 .login-erro{background:var(--risk-bg);color:var(--risk);border-radius:10px;padding:10px 12px;font-size:13.5px;font-weight:600;margin-bottom:14px}
+
+/* Janela de relatório */
+.seg.neutral button.on{background:var(--sky);color:var(--blue-dark)}
+.rel-presets{display:flex;flex-wrap:wrap;gap:6px}
+.rel-presets .pill{padding:5px 12px;font-size:12.5px}
