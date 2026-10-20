@@ -210,3 +210,23 @@ h1,h2,strong,.side-brand{font-family:'Sora','Manrope',sans-serif}
 
 @media(max-width:900px){.fotos-form{grid-template-columns:minmax(190px,1fr) minmax(280px,1.4fr)}.fotos-campo-acao{grid-column:1/-1}.fotos-campo-acao .btn-blue{width:auto!important;min-width:190px}}
 @media(max-width:575px){.fotos-form{grid-template-columns:1fr;gap:14px}.fotos-campo-acao{grid-column:auto}.fotos-campo-acao .btn-blue{width:100%!important}.fotos-cabecalho{align-items:flex-start;flex-direction:column}.fotos-galeria-acoes{width:100%;justify-content:space-between}}
+
+.foto-preview{cursor:zoom-in;transition:filter .18s ease}
+.foto-preview:hover{filter:brightness(.92)}
+.foto-preview:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
+.foto-lightbox[hidden]{display:none!important}
+.foto-lightbox{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:64px 86px;background:rgba(5,13,19,.94);color:#fff}
+.foto-lightbox-figura{display:flex;flex-direction:column;align-items:center;max-width:100%;max-height:100%;margin:0}
+.foto-lightbox-figura img{display:block;max-width:min(86vw,1500px);max-height:calc(100vh - 150px);object-fit:contain;border-radius:6px}
+.foto-lightbox-figura figcaption{display:flex;justify-content:space-between;gap:24px;width:min(86vw,1500px);padding-top:14px;color:#fff;font-size:14px}
+.foto-lightbox-figura figcaption span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.foto-lightbox-figura figcaption span:last-child{flex:none;color:rgba(255,255,255,.72)}
+.foto-lightbox-fechar,.foto-lightbox-controle{position:absolute;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.25);border-radius:50%;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;transition:background .15s ease}
+.foto-lightbox-fechar:hover,.foto-lightbox-controle:hover{background:rgba(255,255,255,.22)}
+.foto-lightbox-fechar{top:22px;right:26px;width:46px;height:46px;font-size:20px}
+.foto-lightbox-controle{top:50%;width:52px;height:52px;transform:translateY(-50%);font-size:24px}
+.foto-lightbox-anterior{left:22px}
+.foto-lightbox-proxima{right:22px}
+.foto-lightbox button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+body.foto-lightbox-aberto{overflow:hidden}
+@media(max-width:575px){.foto-lightbox{padding:64px 52px}.foto-lightbox-figura img{max-width:100%;max-height:calc(100vh - 170px)}.foto-lightbox-figura figcaption{width:100%;gap:12px;font-size:12px}.foto-lightbox-fechar{top:14px;right:14px;width:42px;height:42px}.foto-lightbox-controle{width:42px;height:42px;font-size:20px}.foto-lightbox-anterior{left:8px}.foto-lightbox-proxima{right:8px}}

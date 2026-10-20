@@ -5,6 +5,8 @@ let fotosTurmaAtual = [];
 let arquivosFotosSelecionados = [];
 let carregamentoFotos = 0;
 let baixandoTodasFotos = false;
+let indiceFotoVisualizada = -1;
+let focoAnteriorVisualizador = null;
 
 function statusFotos(texto, erro = false) {
   const elemento = fotos$("#statusFotos");
@@ -65,7 +67,7 @@ async function carregarFotosTurma() {
       ? comUrl.map((foto) => `
           <article class="foto-card">
             ${foto.url
-              ? `<img class="foto-preview" src="${esc(foto.url)}" alt="${esc(foto.nome_arquivo)}" loading="lazy" />`
+              ? `<img class="foto-preview" src="${esc(foto.url)}" alt="${esc(foto.nome_arquivo)}" loading="lazy" role="button" tabindex="0" aria-label="Visualizar ${esc(foto.nome_arquivo)}" data-visualizar-foto="${esc(foto.id)}" />`
               : '<div class="foto-preview d-flex align-items-center justify-content-center text-muted">Pré-visualização indisponível</div>'}
             <div class="foto-info">
               <span class="foto-nome" title="${esc(foto.nome_arquivo)}">${esc(foto.nome_arquivo)}</span>
@@ -210,7 +212,54 @@ fotos$("#baixarTodasFotos").addEventListener("click", async () => {
   }
 });
 
+function fotosVisualizaveis() {
+  return fotosTurmaAtual.filter((foto) => foto.url);
+}
+
+function atualizarVisualizadorFotos() {
+  const lista = fotosVisualizaveis();
+  const foto = lista[indiceFotoVisualizada];
+  if (!foto) return;
+  fotos$("#fotoAmpliada").src = foto.url;
+  fotos$("#fotoAmpliada").alt = foto.nome_arquivo;
+  fotos$("#fotoAmpliadaNome").textContent = foto.nome_arquivo;
+  fotos$("#fotoAmpliadaContador").textContent = `${indiceFotoVisualizada + 1} / ${lista.length}`;
+}
+
+function abrirVisualizadorFotos(id) {
+  const indice = fotosVisualizaveis().findIndex((foto) => foto.id === id);
+  if (indice < 0) return;
+  indiceFotoVisualizada = indice;
+  focoAnteriorVisualizador = document.activeElement;
+  atualizarVisualizadorFotos();
+  fotos$("#visualizadorFotos").hidden = false;
+  document.body.classList.add("foto-lightbox-aberto");
+  fotos$("#fecharVisualizadorFotos").focus();
+}
+
+function fecharVisualizadorFotos() {
+  const visualizador = fotos$("#visualizadorFotos");
+  if (visualizador.hidden) return;
+  visualizador.hidden = true;
+  fotos$("#fotoAmpliada").src = "";
+  document.body.classList.remove("foto-lightbox-aberto");
+  if (focoAnteriorVisualizador instanceof HTMLElement) focoAnteriorVisualizador.focus();
+  focoAnteriorVisualizador = null;
+}
+
+function navegarVisualizadorFotos(direcao) {
+  const lista = fotosVisualizaveis();
+  if (!lista.length) return;
+  indiceFotoVisualizada = (indiceFotoVisualizada + direcao + lista.length) % lista.length;
+  atualizarVisualizadorFotos();
+}
+
 fotos$("#galeriaFotos").addEventListener("click", async (event) => {
+  const imagem = event.target.closest("[data-visualizar-foto]");
+  if (imagem) {
+    abrirVisualizadorFotos(imagem.dataset.visualizarFoto);
+    return;
+  }
   const botao = event.target.closest("[data-baixar-foto]");
   if (!botao) return;
   const foto = fotosTurmaAtual.find((item) => item.id === botao.dataset.baixarFoto);
@@ -231,6 +280,25 @@ fotos$("#galeriaFotos").addEventListener("click", async (event) => {
   } finally {
     botao.disabled = false;
   }
+});
+
+fotos$("#galeriaFotos").addEventListener("keydown", (event) => {
+  if ((event.key !== "Enter" && event.key !== " ") || !event.target.matches("[data-visualizar-foto]")) return;
+  event.preventDefault();
+  abrirVisualizadorFotos(event.target.dataset.visualizarFoto);
+});
+
+fotos$("#fecharVisualizadorFotos").addEventListener("click", fecharVisualizadorFotos);
+fotos$("#fotoAnterior").addEventListener("click", () => navegarVisualizadorFotos(-1));
+fotos$("#proximaFoto").addEventListener("click", () => navegarVisualizadorFotos(1));
+fotos$("#visualizadorFotos").addEventListener("click", (event) => {
+  if (event.target === event.currentTarget) fecharVisualizadorFotos();
+});
+document.addEventListener("keydown", (event) => {
+  if (fotos$("#visualizadorFotos").hidden) return;
+  if (event.key === "Escape") fecharVisualizadorFotos();
+  if (event.key === "ArrowLeft") navegarVisualizadorFotos(-1);
+  if (event.key === "ArrowRight") navegarVisualizadorFotos(1);
 });
 
 (async () => {
