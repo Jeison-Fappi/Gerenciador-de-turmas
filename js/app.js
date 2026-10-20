@@ -6,8 +6,8 @@ let alunoEditando = null;
 
 const $ = (s) => document.querySelector(s);
 function situacao(faltas) {
-  if (faltas >= 5) return { classe: "sit-risco", texto: "Em risco" };
-  if (faltas >= 3) return { classe: "sit-atencao", texto: "Em atenção" };
+  if (faltas >= FALTAS_RISCO) return { classe: "sit-risco", texto: "Em risco" };
+  if (faltas >= FALTAS_ALERTA) return { classe: "sit-atencao", texto: "Em atenção" };
   return { classe: "sit-regular", texto: "Regular" };
 }
 
@@ -34,16 +34,17 @@ $("#dataHoje").innerText = new Date().toLocaleDateString("pt-BR", {
 function atualizarCards() {
   let totalFaltas = 0, emAtencao = 0, emRisco = 0;
 
-  for (const a of alunos) {
+  const ativos = alunosAtivos();
+  for (const a of ativos) {
     const f = faltasDoAluno(a);
     totalFaltas += f;
-    if (f >= 5) emRisco++;
-    else if (f >= 3) emAtencao++;
+    if (f >= FALTAS_RISCO) emRisco++;
+    else if (f >= FALTAS_ALERTA) emAtencao++;
   }
 
-  $("#totalAlunos").innerText = alunos.length;
+  $("#totalAlunos").innerText = ativos.length;
   $("#totalFaltas").innerText = totalFaltas;
-  $("#mediaFaltas").innerText = (alunos.length ? totalFaltas / alunos.length : 0).toFixed(1);
+  $("#mediaFaltas").innerText = (ativos.length ? totalFaltas / ativos.length : 0).toFixed(1);
   $("#emAtencao").innerText = emAtencao;
   $("#emRisco").innerText = emRisco;
   $("#emAtencao").parentElement.classList.toggle("has", emAtencao > 0);
@@ -51,13 +52,15 @@ function atualizarCards() {
 }
 
 // ---------- Tabela ----------
-function atualizarTabela(lista = alunos) {
+function atualizarTabela(lista = alunosAtivos()) {
   const tabela = $("#tabelaAlunos");
 
   if (lista.length === 0) {
     tabela.innerHTML = `<tr><td colspan="5"><div class="vazio">
       <i class="bi bi-people fs-3 d-block mb-2"></i>
-      ${alunos.length === 0 ? 'Nenhum aluno cadastrado ainda. Clique em "Novo aluno" para começar.' : "Nenhum aluno encontrado com esse filtro."}
+      ${alunosAtivos().length === 0
+        ? alunos.length ? "Não há alunos ativos. Alunos arquivados podem ser reativados abaixo." : 'Nenhum aluno cadastrado ainda. Clique em "Novo aluno" para começar.'
+        : "Nenhum aluno encontrado com esse filtro."}
     </div></td></tr>`;
     return;
   }
@@ -65,7 +68,7 @@ function atualizarTabela(lista = alunos) {
   tabela.innerHTML = lista.map((a) => {
     const f = faltasDoAluno(a);
     const s = situacao(f);
-    const pct = Math.min(f / 5, 1) * 100;
+    const pct = Math.min(f / FALTAS_RISCO, 1) * 100;
     return `
       <tr>
         <td><div class="who"><span class="avatar">${esc(iniciais(a.nome))}</span>${esc(a.nome)}</div></td>
@@ -80,15 +83,52 @@ function atualizarTabela(lista = alunos) {
         <td class="acts">
           <button class="ibtn" onclick="abrirCalendario('${a.id}')" title="Calendário de observações"><i class="bi bi-calendar3"></i></button>
           <button class="ibtn" onclick="abrirEdicao('${a.id}')" title="Editar"><i class="bi bi-pencil"></i></button>
-          <button class="ibtn del" onclick="excluirAluno('${a.id}')" title="Excluir"><i class="bi bi-trash3"></i></button>
+          <button class="ibtn" onclick="alternarArquivoAluno('${a.id}', true)" title="Arquivar aluno"><i class="bi bi-archive"></i></button>
+          <button class="ibtn del" onclick="excluirAluno('${a.id}')" title="Excluir definitivamente"><i class="bi bi-trash3"></i></button>
         </td>
       </tr>`;
   }).join("");
 }
 
+let arquivadosVisiveis = false;
+
+function atualizarListaArquivados() {
+  const arquivados = alunos.filter((aluno) => aluno.arquivado);
+  const secao = $("#secaoArquivados");
+  const botao = $("#alternarListaArquivados");
+  const conteudo = $("#conteudoArquivados");
+  const tabela = $("#tabelaAlunosArquivados");
+  if (!arquivados.length) arquivadosVisiveis = false;
+  secao.classList.toggle("d-none", arquivados.length === 0);
+  botao.textContent = arquivadosVisiveis ? "Ocultar alunos" : `Ver alunos arquivados (${arquivados.length})`;
+  botao.setAttribute("aria-expanded", String(arquivadosVisiveis));
+  conteudo.classList.toggle("d-none", !arquivadosVisiveis);
+  if (!arquivados.length) {
+    tabela.replaceChildren();
+    return;
+  }
+  tabela.innerHTML = arquivados.map((aluno) => `
+    <tr class="linha-arquivada">
+      <td><div class="who"><span class="avatar avatar-arquivado">${esc(iniciais(aluno.nome))}</span>${esc(aluno.nome)} <span class="badge-arquivado">Arquivado</span></div></td>
+      <td><span class="chip">${esc(aluno.turma)}</span></td>
+      <td>${faltasDoAluno(aluno)}</td>
+      <td class="acts">
+        <button class="ibtn" onclick="abrirCalendario('${aluno.id}')" title="Consultar histórico"><i class="bi bi-calendar3"></i></button>
+        <button class="btn-ghost btn-reativar" onclick="alternarArquivoAluno('${aluno.id}', false)">Reativar</button>
+        <button class="ibtn del" onclick="excluirAluno('${aluno.id}')" title="Excluir definitivamente"><i class="bi bi-trash3"></i></button>
+      </td>
+    </tr>`).join("");
+}
+
+$("#alternarListaArquivados").addEventListener("click", () => {
+  arquivadosVisiveis = !arquivadosVisiveis;
+  atualizarListaArquivados();
+});
+
 function atualizarSistema() {
   atualizarCards();
   aplicarFiltros();
+  atualizarListaArquivados();
 }
 
 function popularTurmas() {
@@ -409,13 +449,37 @@ async function salvarEdicao() {
   toast("success", "Aluno atualizado");
 }
 
-// ---------- Exclusão ----------
+// ---------- Arquivamento e exclusão ----------
+async function alternarArquivoAluno(id, arquivado) {
+  const aluno = alunos.find((item) => item.id === id);
+  if (!aluno) return;
+  const resultado = await Swal.fire({
+    title: arquivado ? `Arquivar ${esc(aluno.nome)}?` : `Reativar ${esc(aluno.nome)}?`,
+    text: arquivado
+      ? "O aluno e o histórico serão preservados. Ele deixará de aparecer nas chamadas e indicadores ativos."
+      : "O aluno voltará a aparecer nas chamadas e indicadores ativos.",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: arquivado ? "Arquivar" : "Reativar",
+    cancelButtonText: "Cancelar",
+  });
+  if (!resultado.isConfirmed) return;
+  try {
+    await atualizarArquivoAluno(id, arquivado);
+    atualizarSistema();
+    toast("success", arquivado ? "Aluno arquivado" : "Aluno reativado");
+  } catch (error) {
+    falhaSalvar(error);
+  }
+}
+
 function excluirAluno(id) {
   const a = alunos.find((x) => x.id === id);
+  if (!a) return;
 
   Swal.fire({
-    title: `Excluir ${esc(a.nome)}?`,
-    text: "Essa ação não pode ser desfeita.",
+    title: `Excluir ${esc(a.nome)} definitivamente?`,
+    text: "A exclusão remove também as presenças e observações deste aluno e não pode ser desfeita.",
     icon: "warning",
     showCancelButton: true,
     confirmButtonText: "Excluir",
@@ -444,7 +508,7 @@ function aplicarFiltros() {
   const turma = $("#filtroTurma").value;
 
   atualizarTabela(
-    alunos.filter(
+    alunosAtivos().filter(
       (a) =>
         (a.nome.toLowerCase().includes(texto) || a.turma.toLowerCase().includes(texto)) &&
         (turma === "TODAS" || a.turma === turma),

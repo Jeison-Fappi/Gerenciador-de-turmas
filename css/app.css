@@ -230,3 +230,13 @@ h1,h2,strong,.side-brand{font-family:'Sora','Manrope',sans-serif}
 .foto-lightbox button:focus-visible{outline:3px solid #fff;outline-offset:3px}
 body.foto-lightbox-aberto{overflow:hidden}
 @media(max-width:575px){.foto-lightbox{padding:64px 52px}.foto-lightbox-figura img{max-width:100%;max-height:calc(100vh - 170px)}.foto-lightbox-figura figcaption{width:100%;gap:12px;font-size:12px}.foto-lightbox-fechar{top:14px;right:14px;width:42px;height:42px}.foto-lightbox-controle{width:42px;height:42px;font-size:20px}.foto-lightbox-anterior{left:8px}.foto-lightbox-proxima{right:8px}}
+
+.alunos-arquivados{overflow:hidden}
+.arquivados-toolbar{padding:18px 22px}
+.arquivados-toolbar .card-title{font-size:17px}
+.arquivados-toolbar p{font-size:13px}
+.tabela-arquivados tbody tr.linha-arquivada{background:#f6f8f9;color:#627482}
+.tabela-arquivados .avatar-arquivado{background:#e4e9ed;color:#667784}
+.badge-arquivado{display:inline-flex;align-items:center;margin-left:8px;padding:3px 8px;border-radius:999px;background:#e9eef1;color:#627482;font-size:11px;font-weight:700}
+.btn-reativar{padding:7px 10px;font-size:12px}
+@media(max-width:575px){.arquivados-toolbar{align-items:flex-start;flex-direction:column}.badge-arquivado{margin-left:0}}

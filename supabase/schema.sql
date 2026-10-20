@@ -16,6 +16,7 @@ create table if not exists alunos (
   nome text not null,
   turma text not null references turmas(nome) on update cascade on delete restrict,
   faltas_anteriores int not null default 0,
+  arquivado boolean not null default false,
   criado_em timestamptz not null default now()
 );
 

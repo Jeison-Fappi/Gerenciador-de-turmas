@@ -72,6 +72,22 @@
             </table>
           </div>
         </section>
+
+        <section id="secaoArquivados" class="card-x mt alunos-arquivados d-none">
+          <div class="toolbar arquivados-toolbar">
+            <div>
+              <h2 class="card-title mb-1">Alunos arquivados</h2>
+              <p class="text-muted mb-0">Histórico preservado; alunos arquivados não entram em chamadas ou indicadores ativos.</p>
+            </div>
+            <button id="alternarListaArquivados" class="btn-ghost" type="button" aria-expanded="false">Ver alunos arquivados</button>
+          </div>
+          <div id="conteudoArquivados" class="table-responsive d-none">
+            <table class="tabela tabela-arquivados">
+              <thead><tr><th>Aluno</th><th>Turma</th><th>Faltas históricas</th><th></th></tr></thead>
+              <tbody id="tabelaAlunosArquivados"></tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
 

@@ -350,7 +350,7 @@ async function baixarRelatorioTurma({ turma, de, ate }) {
   const logo = await relatorioLogo();
   const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
-  const lista = alunos.filter((aluno) => aluno.turma === turma).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const lista = alunosAtivos().filter((aluno) => aluno.turma === turma).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const registros = lista.map((aluno) => ({ aluno, ...relColetar(aluno, de, ate) }));
   const total = registros.reduce((s, r) => ({ P: s.P + r.cont.P, F: s.F + r.cont.F, J: s.J + r.cont.J }), { P: 0, F: 0, J: 0 });
   const chamadas = total.P + total.F + total.J;

@@ -5,7 +5,7 @@ const COR = { regular: "#2fa77a", atencao: "#e0a800", risco: "#b42338", marca: "
 const graficos = {};
 let turmaAtual = "TODAS";
 
-const situacao = (f) => (f >= 5 ? "risco" : f >= 3 ? "atencao" : "regular");
+const situacao = (f) => (f >= FALTAS_RISCO ? "risco" : f >= FALTAS_ALERTA ? "atencao" : "regular");
 
 function mostrarAviso(msg) {
   document.getElementById("conteudo").classList.add("d-none");
@@ -40,7 +40,7 @@ function renderizar() {
   document.getElementById("kAlunos").innerText = lista.length;
   document.getElementById("kFaltas").innerText = total;
   document.getElementById("kMedia").innerText = (lista.length ? total / lista.length : 0).toFixed(1);
-  const risco = lista.filter((a) => a.faltas >= 5).length;
+  const risco = lista.filter((a) => a.faltas >= FALTAS_RISCO).length;
   document.getElementById("kRisco").innerText = risco;
   document.getElementById("kRisco").parentElement.classList.toggle("has", risco > 0);
 
@@ -143,7 +143,7 @@ function configurarRelatorioTurma() {
 (async () => {
 if (!(await exigirLogin())) return;
 await carregarDados();
-dados = alunos.map((a) => ({ ...a, faltas: faltasDoAluno(a) }));
+dados = alunosAtivos().map((a) => ({ ...a, faltas: faltasDoAluno(a) }));
 if (typeof Chart === "undefined") {
   mostrarAviso("Não foi possível carregar a biblioteca de gráficos. Verifique a conexão com a internet e recarregue a página.");
 } else if (dados.length === 0) {

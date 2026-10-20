@@ -56,7 +56,10 @@ async function buscarTudo(tabela, ordem) {
   return todas;
 }
 
-const doBanco = (r) => ({ id: r.id, nome: r.nome, turma: r.turma, faltasAnteriores: r.faltas_anteriores });
+const doBanco = (r) => ({ id: r.id, nome: r.nome, turma: r.turma, faltasAnteriores: r.faltas_anteriores, arquivado: Boolean(r.arquivado) });
+const FALTAS_ALERTA = 7;
+const FALTAS_RISCO = 10;
+const alunosAtivos = () => alunos.filter((aluno) => !aluno.arquivado);
 const porNome = (a, b) => a.nome.localeCompare(b.nome, "pt-BR");
 
 async function carregarDados() {
@@ -170,8 +173,15 @@ async function atualizarAluno(a) {
   alunos.sort(porNome);
 }
 
+async function atualizarArquivoAluno(id, arquivado) {
+  const { data, error } = await sb.from("alunos").update({ arquivado }).eq("id", id).select().single();
+  if (error) throw error;
+  const aluno = alunos.find((item) => item.id === id);
+  if (aluno) aluno.arquivado = data.arquivado;
+}
+
 async function removerAluno(id) {
-  const { error } = await sb.from("alunos").delete().eq("id", id); 
+  const { error } = await sb.from("alunos").delete().eq("id", id);
   if (error) throw error;
   alunos = alunos.filter((a) => a.id !== id);
   for (const dia in presencas) {

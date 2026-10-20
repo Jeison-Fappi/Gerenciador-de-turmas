@@ -51,7 +51,7 @@ function render() {
   $("#diaLabel").innerText = data.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   $("#avisoFds").classList.toggle("d-none", ![0, 6].includes(data.getDay()));
 
-  const lista = alunos.filter((a) => a.turma === turma).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const lista = alunosAtivos().filter((a) => a.turma === turma).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const temAula = aulaDaTurma(turma, dia);
   const excecao = excecaoAula(turma, dia);
   $("#estadoAula").textContent = excecao
@@ -109,7 +109,7 @@ $("#listaChamada").addEventListener("click", (e) => {
 
 function marcarRestante() {
   if (!aulaDaTurma(turma, dia)) return;
-  const ids = alunos.filter((a) => a.turma === turma && !statusDoDia(a.id, dia)).map((a) => a.id);
+  const ids = alunosAtivos().filter((a) => a.turma === turma && !statusDoDia(a.id, dia)).map((a) => a.id);
   marcarVarios(ids, dia, "P").catch(falhaSalvar);
   render();
 }
