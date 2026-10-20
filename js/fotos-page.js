@@ -4,6 +4,7 @@ let turmaFotosAtual = "";
 let fotosTurmaAtual = [];
 let arquivosFotosSelecionados = [];
 let carregamentoFotos = 0;
+let baixandoTodasFotos = false;
 
 function statusFotos(texto, erro = false) {
   const elemento = fotos$("#statusFotos");
@@ -41,6 +42,7 @@ async function carregarFotosTurma() {
   if (!turmaFotosAtual) {
     galeria.innerHTML = '<div class="fotos-vazio">Selecione uma turma para consultar as fotos.</div>';
     total.textContent = "";
+    atualizarBotaoBaixarTodas();
     return;
   }
 
@@ -58,6 +60,7 @@ async function carregarFotosTurma() {
     if (sequencia !== carregamentoFotos) return;
     fotosTurmaAtual = comUrl;
     total.textContent = `${comUrl.length} foto(s)`;
+    atualizarBotaoBaixarTodas();
     galeria.innerHTML = comUrl.length
       ? comUrl.map((foto) => `
           <article class="foto-card">
@@ -80,7 +83,20 @@ async function carregarFotosTurma() {
     if (sequencia !== carregamentoFotos) return;
     galeria.innerHTML = '<div class="fotos-vazio">Não foi possível carregar as fotos. Confira se a migração do Supabase foi executada.</div>';
     total.textContent = "";
+    atualizarBotaoBaixarTodas();
   }
+}
+
+function atualizarBotaoBaixarTodas() {
+  const botao = fotos$("#baixarTodasFotos");
+  botao.disabled = baixandoTodasFotos || fotosTurmaAtual.length === 0;
+  botao.innerHTML = baixandoTodasFotos
+    ? '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Preparando arquivo...'
+    : '<i class="bi bi-file-earmark-zip"></i> Baixar todas';
+}
+
+function nomeArquivoSeguro(nome) {
+  return nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-|-$/g, "") || "turma";
 }
 
 fotos$("#turmaFotos").addEventListener("change", async (event) => {
@@ -139,6 +155,59 @@ fotos$("#enviarFotos").addEventListener("click", async () => {
   statusFotos(falhas.length
     ? `${enviadas} enviada(s). Falha ao enviar: ${falhas.join(", ")}.`
     : `${enviadas} foto(s) enviada(s) para ${turma}.`, falhas.length > 0);
+});
+
+fotos$("#baixarTodasFotos").addEventListener("click", async () => {
+  if (!fotosTurmaAtual.length || baixandoTodasFotos) return;
+  if (typeof JSZip === "undefined") {
+    statusFotos("Não foi possível iniciar o download. Atualize a página e tente novamente.", true);
+    return;
+  }
+
+  baixandoTodasFotos = true;
+  atualizarBotaoBaixarTodas();
+  statusFotos(`Preparando ${fotosTurmaAtual.length} foto(s) para download...`);
+  const arquivoZip = new JSZip();
+  let baixadas = 0;
+  const falhas = [];
+
+  for (const [indice, foto] of fotosTurmaAtual.entries()) {
+    try {
+      const url = await urlFotoTurma(foto.storage_path);
+      const resposta = await fetch(url);
+      if (!resposta.ok) throw new Error(`Falha HTTP ${resposta.status}`);
+      const conteudo = await resposta.blob();
+      const nome = foto.nome_arquivo || `foto-${indice + 1}`;
+      const duplicado = arquivoZip.file(nome);
+      arquivoZip.file(duplicado ? `${indice + 1}-${nome}` : nome, conteudo);
+      baixadas++;
+    } catch (error) {
+      console.error(error);
+      falhas.push(foto.nome_arquivo || `foto ${indice + 1}`);
+    }
+  }
+
+  try {
+    if (!baixadas) throw new Error("Nenhuma foto pôde ser baixada.");
+    const conteudoZip = await arquivoZip.generateAsync({ type: "blob" });
+    const urlZip = URL.createObjectURL(conteudoZip);
+    const link = document.createElement("a");
+    link.href = urlZip;
+    link.download = `fotos-${nomeArquivoSeguro(turmaFotosAtual)}.zip`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(urlZip), 1000);
+    statusFotos(falhas.length
+      ? `${baixadas} foto(s) incluída(s) no ZIP. Não foi possível incluir ${falhas.length} arquivo(s).`
+      : `${baixadas} foto(s) incluída(s) no arquivo ZIP.` , falhas.length > 0);
+  } catch (error) {
+    console.error(error);
+    statusFotos("Não foi possível preparar o arquivo. Tente novamente.", true);
+  } finally {
+    baixandoTodasFotos = false;
+    atualizarBotaoBaixarTodas();
+  }
 });
 
 fotos$("#galeriaFotos").addEventListener("click", async (event) => {
