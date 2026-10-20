@@ -47,7 +47,7 @@ async function buscarTudo(tabela, ordem) {
   while (true) {
     let q = sb.from(tabela).select("*");
     ordem.forEach((c) => (q = q.order(c)));
-    const { data, error } = await q.range(de, de + 999); // o Supabase devolve no máximo 1000 por vez
+    const { data, error } = await q.range(de, de + 999);
     if (error) throw error;
     todas = todas.concat(data);
     if (data.length < 1000) break;
@@ -179,6 +179,54 @@ async function removerAluno(id) {
     if (Object.keys(presencas[dia]).length === 0) delete presencas[dia];
   }
   delete observacoes[id];
+}
+
+const BUCKET_FOTOS_TURMAS = "fotos-turmas";
+const TIPOS_FOTO_TURMA = new Set(["image/jpeg", "image/png", "image/webp"]);
+const TAMANHO_MAXIMO_FOTO = 10 * 1024 * 1024;
+
+async function listarFotosTurma(turma) {
+  const { data, error } = await sb.from("fotos_turma")
+    .select("id, turma, storage_path, nome_arquivo, mime_type, tamanho_bytes, criado_em")
+    .eq("turma", turma)
+    .order("criado_em", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+async function enviarFotoTurma(arquivo, turma) {
+  if (!TIPOS_FOTO_TURMA.has(arquivo.type)) throw new Error("Use uma imagem JPG, PNG ou WebP.");
+  if (arquivo.size > TAMANHO_MAXIMO_FOTO) throw new Error("Cada imagem pode ter no máximo 10 MB.");
+
+  const extensoes = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+  const caminho = `${crypto.randomUUID()}.${extensoes[arquivo.type]}`;
+  const { error: erroUpload } = await sb.storage.from(BUCKET_FOTOS_TURMAS).upload(caminho, arquivo, {
+    contentType: arquivo.type,
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (erroUpload) throw erroUpload;
+
+  const { data, error } = await sb.from("fotos_turma").insert({
+    turma,
+    storage_path: caminho,
+    nome_arquivo: arquivo.name.slice(0, 255),
+    mime_type: arquivo.type,
+    tamanho_bytes: arquivo.size,
+  }).select().single();
+
+  if (error) {
+    await sb.storage.from(BUCKET_FOTOS_TURMAS).remove([caminho]);
+    throw error;
+  }
+  return data;
+}
+
+async function urlFotoTurma(caminho, nomeDownload = null) {
+  const opcoes = nomeDownload ? { download: nomeDownload } : undefined;
+  const { data, error } = await sb.storage.from(BUCKET_FOTOS_TURMAS).createSignedUrl(caminho, 3600, opcoes);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 // ---------- Presenças ----------

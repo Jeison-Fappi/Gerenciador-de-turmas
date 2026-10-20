@@ -185,3 +185,18 @@ h1,h2,strong,.side-brand{font-family:'Sora','Manrope',sans-serif}
 .rel-presets .pill{padding:5px 12px;font-size:12.5px}
 
 .cal-dia.sem-aula { opacity: .38; cursor: not-allowed; }
+
+/* Fotos por turma */
+.fotos-controles{margin-bottom:22px}
+.fotos-status{min-height:22px;margin-top:12px;color:var(--muted);font-size:13px}
+.fotos-status.erro{color:var(--risk)}
+.fotos-cabecalho{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.fotos-cabecalho .card-title{margin:0}
+.fotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.foto-card{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff}
+.foto-preview{width:100%;height:190px;display:block;object-fit:cover;background:#f3f7f9}
+.foto-info{padding:12px 14px}
+.foto-nome{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-size:13px;font-weight:700}
+.foto-data{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+.foto-acoes{display:flex;justify-content:flex-end;padding:0 14px 14px}
+.fotos-vazio{padding:40px 20px;border:1px dashed var(--line);border-radius:14px;background:#fff;color:var(--muted);text-align:center}

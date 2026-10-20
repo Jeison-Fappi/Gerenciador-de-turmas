@@ -14,11 +14,12 @@ gráficos e relatórios em PDF. Front-end estático (HTML, CSS e JavaScript) + S
 - Relatório em PDF por aluno (simples ou completo), com período à escolha
 - Relatório completo em PDF por turma, com resumo por aluno, registros de frequência e observações
 - Importação de alunos por arquivos CSV ou Excel, vinculados à turma selecionada
+- Galeria privada de fotos por turma, com envio e download de imagens
 
 ## Estrutura
 | Pasta / arquivo | Função |
 |---|---|
-| `index.html`, `chamada.html`, `graficos.html`, `calendario.html`, `login.html` | Telas |
+| `index.html`, `chamada.html`, `graficos.html`, `calendario.html`, `fotos.html`, `login.html` | Telas |
 | `js/config.js` | URL e chave **publishable** do Supabase |
 | `js/dados.js` | Acesso ao banco (tudo passa por aqui) |
 | `js/relatorio.js` | Geração dos PDFs |
@@ -26,6 +27,7 @@ gráficos e relatórios em PDF. Front-end estático (HTML, CSS e JavaScript) + S
 | `supabase/seguranca.sql` | Lista de equipe e limites de tamanho |
 | `supabase/turmas.sql` | Migração das turmas existentes para o cadastro dinâmico |
 | `supabase/agenda_turmas.sql` | Agenda semanal, arquivamento e exceções por data |
+| `supabase/fotos_turmas.sql` | Bucket privado, metadados e permissões para fotos por turma |
 | `_headers` | Cabeçalhos de segurança (Netlify) |
 
 ## Instalação
@@ -37,9 +39,10 @@ gráficos e relatórios em PDF. Front-end estático (HTML, CSS e JavaScript) + S
 6. Rode `supabase/turmas.sql` para criar a tabela de turmas e importar as turmas já usadas pelos alunos.
    Em um projeto novo, esse passo também cadastra as turmas iniciais.
 7. Para atualizar o projeto de teste que já recebeu os scripts anteriores, rode `supabase/agenda_turmas.sql`.
-8. Em **Project Settings > API Keys**, copie a **Project URL** e a chave **publishable**
+8. Rode `supabase/fotos_turmas.sql` depois de `seguranca.sql` e `agenda_turmas.sql`.
+9. Em **Project Settings > API Keys**, copie a **Project URL** e a chave **publishable**
    para `js/config.js`. **Nunca** use a chave `secret` / `service_role` no código.
-9. Abra com Live Server ou publique em um host estático (Netlify).
+10. Abra com Live Server ou publique em um host estático (Netlify).
 
 ## Importar alunos
 Na tela Painel, selecione **Importar alunos**, escolha a turma e carregue um arquivo `.csv`, `.xlsx` ou `.xls`.
@@ -49,6 +52,10 @@ e linhas inválidas são ignorados. A importação não altera as chamadas ou ob
 ## Relatório da turma
 Na tela **Gráficos**, selecione a turma e o período para baixar o PDF. O documento inclui totais da turma,
 frequência individual, todos os registros de chamada e observações no intervalo.
+
+## Fotos por turma
+Na tela **Fotos**, selecione a turma e envie imagens JPG, PNG ou WebP de até 10 MB cada. Os arquivos ficam
+em um bucket privado do Supabase e aparecem para os usuários autorizados da equipe, com opção de download.
 
 ## Adicionar ou remover pessoas
 Veja os comandos no final de `supabase/seguranca.sql`.
