@@ -4,11 +4,30 @@
 const $ = (s) => document.querySelector(s);
 
 let dia = dataISO();
-let turma = turmas[0];
+let turma = "";
 
 const selTurma = $("#turmaChamada");
-turmas.forEach((t) => (selTurma.innerHTML += `<option value="${esc(t)}">${esc(t)}</option>`));
 selTurma.addEventListener("change", () => { turma = selTurma.value; render(); });
+
+$("#alternarAula").addEventListener("click", async () => {
+  if (!turma) return;
+  try {
+    await salvarExcecaoAula(turma, dia, !aulaDaTurma(turma, dia));
+    render();
+  } catch (error) {
+    falhaSalvar(error);
+  }
+});
+
+$("#restaurarAgenda").addEventListener("click", async () => {
+  if (!turma) return;
+  try {
+    await restaurarAgendaAula(turma, dia);
+    render();
+  } catch (error) {
+    falhaSalvar(error);
+  }
+});
 
 $("#dataChamada").addEventListener("change", (e) => {
   if (e.target.value) { dia = e.target.value; render(); }
@@ -33,8 +52,16 @@ function render() {
   $("#avisoFds").classList.toggle("d-none", ![0, 6].includes(data.getDay()));
 
   const lista = alunos.filter((a) => a.turma === turma).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const temAula = aulaDaTurma(turma, dia);
+  const excecao = excecaoAula(turma, dia);
+  $("#estadoAula").textContent = excecao
+    ? excecao.ativa ? "Aula ativada nesta data" : "Aula desativada nesta data"
+    : temAula ? "Aula prevista na agenda" : "Sem aula prevista na agenda";
+  $("#alternarAula").textContent = temAula ? "Desativar aula neste dia" : "Ativar aula neste dia";
+  $("#alternarAula").disabled = !turma;
+  $("#restaurarAgenda").classList.toggle("d-none", !excecao);
   const c = { P: 0, F: 0, J: 0, "": 0 };
-  lista.forEach((a) => c[statusDoDia(a.id, dia)]++);
+  if (temAula) lista.forEach((a) => c[statusDoDia(a.id, dia)]++);
 
   $("#cP").innerText = c.P;
   $("#cF").innerText = c.F;
@@ -42,8 +69,12 @@ function render() {
   $("#cS").innerText = c[""];
   $("#cF").parentElement.classList.toggle("has", c.F > 0);
   $("#cJ").parentElement.classList.toggle("has", c.J > 0);
-  $("#btnRestante").disabled = c[""] === 0;
+  $("#btnRestante").disabled = !temAula || c[""] === 0;
 
+  if (!temAula) {
+    $("#listaChamada").innerHTML = `<div class="vazio">Não há aula programada para esta data. Ative o dia para registrar a presença.</div>`;
+    return;
+  }
   if (lista.length === 0) {
     $("#listaChamada").innerHTML = `<div class="vazio">Nenhum aluno nesta turma.</div>`;
     return;
@@ -69,6 +100,7 @@ function render() {
 $("#listaChamada").addEventListener("click", (e) => {
   const b = e.target.closest(".seg button");
   if (!b) return;
+  if (!aulaDaTurma(turma, dia)) return;
   const id = b.parentElement.dataset.id;
   const novo = b.dataset.st;
   marcarStatus(id, dia, statusDoDia(id, dia) === novo ? "" : novo).catch(falhaSalvar);
@@ -76,6 +108,7 @@ $("#listaChamada").addEventListener("click", (e) => {
 });
 
 function marcarRestante() {
+  if (!aulaDaTurma(turma, dia)) return;
   const ids = alunos.filter((a) => a.turma === turma && !statusDoDia(a.id, dia)).map((a) => a.id);
   marcarVarios(ids, dia, "P").catch(falhaSalvar);
   render();
@@ -84,5 +117,18 @@ function marcarRestante() {
 (async () => {
   if (!(await exigirLogin())) return;
   await carregarDados();
+  if (turmas.length) {
+    selTurma.replaceChildren();
+    turmas.forEach((nome) => {
+      const option = document.createElement("option");
+      option.value = nome;
+      option.textContent = nome;
+      selTurma.append(option);
+    });
+    turma = turmas[0];
+    selTurma.value = turma;
+  } else {
+    selTurma.innerHTML = '<option value="">Nenhuma turma cadastrada</option>';
+  }
   render();
 })();

@@ -183,3 +183,5 @@ h1,h2,strong,.side-brand{font-family:'Sora','Manrope',sans-serif}
 .seg.neutral button.on{background:var(--sky);color:var(--blue-dark)}
 .rel-presets{display:flex;flex-wrap:wrap;gap:6px}
 .rel-presets .pill{padding:5px 12px;font-size:12.5px}
+
+.cal-dia.sem-aula { opacity: .38; cursor: not-allowed; }

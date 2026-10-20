@@ -103,6 +103,42 @@ function renderizar() {
   });
 }
 
+function configurarRelatorioTurma() {
+  const select = document.getElementById("turmaRelatorio");
+  const hoje = new Date();
+  const inicioAno = `${hoje.getFullYear()}-01-01`;
+  const ate = dataISO(hoje);
+  document.getElementById("relatorioDe").value = inicioAno;
+  document.getElementById("relatorioAte").value = ate;
+  select.replaceChildren();
+  cadastroTurmas.forEach((registro) => {
+    const option = document.createElement("option");
+    option.value = registro.nome;
+    option.textContent = registro.arquivada ? `${registro.nome} (arquivada)` : registro.nome;
+    select.append(option);
+  });
+  const botao = document.getElementById("baixarRelatorioTurma");
+  botao.disabled = cadastroTurmas.length === 0;
+  botao.addEventListener("click", async () => {
+    const turma = select.value;
+    const de = document.getElementById("relatorioDe").value;
+    const ateRelatorio = document.getElementById("relatorioAte").value;
+    if (!turma || !de || !ateRelatorio || de > ateRelatorio) {
+      alert("Selecione uma turma e informe um período válido.");
+      return;
+    }
+    botao.disabled = true;
+    try {
+      await baixarRelatorioTurma({ turma, de, ate: ateRelatorio });
+    } catch (error) {
+      console.error(error);
+      alert("Não foi possível gerar o relatório. Recarregue a página e tente novamente.");
+    } finally {
+      botao.disabled = false;
+    }
+  });
+}
+
 // ---------- Início ----------
 (async () => {
 if (!(await exigirLogin())) return;
@@ -120,4 +156,5 @@ if (typeof Chart === "undefined") {
   desenharChips();
   renderizar();
 }
+configurarRelatorioTurma();
 })();

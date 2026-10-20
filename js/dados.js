@@ -6,6 +6,9 @@ const sb = configurado ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
 
 let usuarioEmail = "";
 let alunos = [];
+let turmas = [];
+let cadastroTurmas = [];
+let excecoesAula = [];
 let presencas = {}; 
 let observacoes = {}; 
 
@@ -57,17 +60,77 @@ const doBanco = (r) => ({ id: r.id, nome: r.nome, turma: r.turma, faltasAnterior
 const porNome = (a, b) => a.nome.localeCompare(b.nome, "pt-BR");
 
 async function carregarDados() {
-  const [a, p, o] = await Promise.all([
+  const [a, p, o, t, e] = await Promise.all([
     buscarTudo("alunos", ["nome"]),
     buscarTudo("presencas", ["data", "aluno_id"]),
     buscarTudo("observacoes", ["data", "aluno_id"]),
+    buscarTudo("turmas", ["nome"]),
+    buscarTudo("excecoes_aula", ["data", "turma"]),
   ]);
 
   alunos = a.map(doBanco);
+  cadastroTurmas = t;
+  turmas = t.filter((r) => !r.arquivada).map((r) => r.nome);
+  excecoesAula = e;
   presencas = {};
   p.forEach((r) => ((presencas[r.data] ||= {})[r.aluno_id] = r.status));
   observacoes = {};
   o.forEach((r) => ((observacoes[r.aluno_id] ||= {})[r.data] = r.texto));
+}
+
+// ---------- Turmas e agenda ----------
+function ordenarCadastroTurmas() {
+  cadastroTurmas.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  turmas = cadastroTurmas.filter((r) => !r.arquivada).map((r) => r.nome);
+}
+
+async function salvarTurma(nome, agenda, nomeAnterior = null) {
+  const query = nomeAnterior
+    ? sb.from("turmas").update({ nome, agenda }).eq("nome", nomeAnterior)
+    : sb.from("turmas").insert({ nome, agenda });
+  const { data, error } = await query.select().single();
+  if (error) throw error;
+  if (nomeAnterior) alunos.forEach((a) => { if (a.turma === nomeAnterior) a.turma = nome; });
+  const index = cadastroTurmas.findIndex((r) => r.nome === nomeAnterior);
+  if (index >= 0) cadastroTurmas[index] = data;
+  else cadastroTurmas.push(data);
+  ordenarCadastroTurmas();
+  return data;
+}
+
+async function arquivarTurma(nome, arquivada) {
+  const { data, error } = await sb.from("turmas").update({ arquivada }).eq("nome", nome).select().single();
+  if (error) throw error;
+  const index = cadastroTurmas.findIndex((r) => r.nome === nome);
+  if (index >= 0) cadastroTurmas[index] = data;
+  ordenarCadastroTurmas();
+}
+
+function excecaoAula(turma, data) {
+  return excecoesAula.find((r) => r.turma === turma && r.data === data) || null;
+}
+
+function aulaDaTurma(turmaNome, data) {
+  const registro = cadastroTurmas.find((r) => r.nome === turmaNome);
+  if (!registro || registro.arquivada) return false;
+  const excecao = excecaoAula(turmaNome, data);
+  if (excecao) return excecao.ativa;
+  const diaSemana = new Date(`${data}T12:00:00`).getDay();
+  return (registro.agenda || []).some((horario) => Number(horario.split(":")[0]) === diaSemana);
+}
+
+async function salvarExcecaoAula(turma, data, ativa) {
+  const { error } = await sb.from("excecoes_aula").upsert({ turma, data, ativa }, { onConflict: "turma,data" });
+  if (error) throw error;
+  const atual = excecaoAula(turma, data);
+  if (atual) atual.ativa = ativa;
+  else excecoesAula.push({ turma, data, ativa });
+}
+
+async function restaurarAgendaAula(turma, data) {
+  const { error } = await sb.from("excecoes_aula").delete().eq("turma", turma).eq("data", data);
+  if (error) throw error;
+  excecoesAula = excecoesAula.filter((r) => r.turma !== turma || r.data !== data);
 }
 
 // ---------- Alunos ----------
@@ -82,6 +145,20 @@ async function criarAluno(nome, turma, faltasAnteriores = 0) {
   alunos.push(novo);
   alunos.sort(porNome);
   return novo;
+}
+
+async function criarAlunosEmLote(nomes, turma) {
+  const criados = [];
+  for (let i = 0; i < nomes.length; i += 250) {
+    const { data, error } = await sb.from("alunos")
+      .insert(nomes.slice(i, i + 250).map((nome) => ({ nome, turma })))
+      .select();
+    if (error) throw error;
+    criados.push(...data.map(doBanco));
+  }
+  alunos.push(...criados);
+  alunos.sort(porNome);
+  return criados.length;
 }
 
 async function atualizarAluno(a) {

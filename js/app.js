@@ -91,9 +91,257 @@ function atualizarSistema() {
   aplicarFiltros();
 }
 
-// ---------- Turmas nos selects ----------
-["#turmaAluno", "#editarTurma", "#filtroTurma"].forEach((sel) => {
-  turmas.forEach((t) => ($(sel).innerHTML += `<option value="${esc(t)}">${esc(t)}</option>`));
+function popularTurmas() {
+  const turmaNova = $("#turmaAluno");
+  const turmaEdicao = $("#editarTurma");
+  const filtro = $("#filtroTurma");
+  turmaNova.innerHTML = '<option value="">Selecione a turma</option>';
+  turmaEdicao.innerHTML = '<option value="">Selecione a turma</option>';
+  filtro.innerHTML = '<option value="TODAS">Todas as turmas</option>';
+
+  turmas.forEach((nome) => {
+    for (const select of [turmaNova, filtro]) {
+      const option = document.createElement("option");
+      option.value = nome;
+      option.textContent = nome;
+      select.append(option);
+    }
+  });
+  cadastroTurmas.forEach((registro) => {
+    const option = document.createElement("option");
+    option.value = registro.nome;
+    option.textContent = registro.arquivada ? `${registro.nome} (arquivada)` : registro.nome;
+    turmaEdicao.append(option);
+  });
+  const turmaImportacao = $("#turmaImportacao");
+  if (turmaImportacao) {
+    turmaImportacao.replaceChildren(new Option("Selecione a turma", ""));
+    turmas.forEach((nome) => turmaImportacao.append(new Option(nome, nome)));
+  }
+}
+
+let nomesArquivoImportacao = [];
+let alunosImportacaoPendentes = [];
+
+function prepararImportacaoAlunos() {
+  const turma = $("#turmaImportacao").value;
+  const resultado = $("#resultadoImportacao");
+  const botao = $("#btnConfirmarImportacaoAlunos");
+  const existentes = new Set(alunos.map((aluno) => aluno.nome.trim().toLocaleLowerCase("pt-BR")));
+  const vistos = new Set();
+  let invalidos = 0;
+  alunosImportacaoPendentes = [];
+
+  nomesArquivoImportacao.forEach((valor) => {
+    const nome = String(valor || "").trim().replace(/\s+/g, " ");
+    if (!nome || nome.length > 120) { invalidos++; return; }
+    const chave = nome.toLocaleLowerCase("pt-BR");
+    if (existentes.has(chave) || vistos.has(chave)) { invalidos++; return; }
+    vistos.add(chave);
+    alunosImportacaoPendentes.push(nome);
+  });
+
+  if (!nomesArquivoImportacao.length) {
+    botao.disabled = true;
+    return;
+  }
+  resultado.textContent = `${alunosImportacaoPendentes.length} aluno(s) prontos para importar. ${invalidos} linha(s) vazia(s), duplicada(s) ou inválida(s) serão ignoradas.`;
+  botao.disabled = !turma || alunosImportacaoPendentes.length === 0;
+}
+
+$("#arquivoAlunos").addEventListener("change", async (event) => {
+  const arquivo = event.target.files[0];
+  nomesArquivoImportacao = [];
+  alunosImportacaoPendentes = [];
+  $("#resultadoImportacao").textContent = "";
+  $("#btnConfirmarImportacaoAlunos").disabled = true;
+  if (!arquivo) return;
+  if (typeof XLSX === "undefined") {
+    $("#resultadoImportacao").textContent = "Não foi possível carregar o leitor de planilhas. Verifique a conexão e recarregue a página.";
+    return;
+  }
+  try {
+    const buffer = await arquivo.arrayBuffer();
+    const planilha = XLSX.read(buffer, { type: "array" });
+    const linhas = XLSX.utils.sheet_to_json(planilha.Sheets[planilha.SheetNames[0]], { header: 1, defval: "", raw: false });
+    const cabecalho = (linhas.shift() || []).map((c) => String(c).trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
+    const coluna = cabecalho.findIndex((c) => ["nome", "aluno", "nome do aluno"].includes(c));
+    if (coluna < 0) throw new Error("Inclua uma coluna chamada Nome na primeira linha do arquivo.");
+    nomesArquivoImportacao = linhas.map((linha) => linha[coluna]);
+    prepararImportacaoAlunos();
+  } catch (error) {
+    $("#resultadoImportacao").textContent = error.message || "Não foi possível ler o arquivo selecionado.";
+  }
+});
+
+$("#turmaImportacao").addEventListener("change", prepararImportacaoAlunos);
+$("#btnConfirmarImportacaoAlunos").addEventListener("click", async () => {
+  const botao = $("#btnConfirmarImportacaoAlunos");
+  const turma = $("#turmaImportacao").value;
+  if (!turma || !alunosImportacaoPendentes.length) return;
+  botao.disabled = true;
+  botao.textContent = "Importando...";
+  try {
+    const quantidade = await criarAlunosEmLote(alunosImportacaoPendentes, turma);
+    atualizarSistema();
+    $("#resultadoImportacao").textContent = `${quantidade} aluno(s) importado(s) para ${turma}.`;
+    nomesArquivoImportacao = [];
+    alunosImportacaoPendentes = [];
+    $("#arquivoAlunos").value = "";
+    toast("success", `${quantidade} aluno(s) importado(s)`);
+  } catch (error) {
+    console.error(error);
+    $("#resultadoImportacao").textContent = error?.code === "23505"
+      ? "O arquivo contém um aluno que já está cadastrado. Revise a lista e tente novamente."
+      : "Não foi possível concluir a importação. Verifique a conexão e tente novamente.";
+  } finally {
+    botao.textContent = "Importar alunos";
+    botao.disabled = !turma || alunosImportacaoPendentes.length === 0;
+  }
+});
+
+$("#modalImportarAlunos").addEventListener("hidden.bs.modal", () => {
+  nomesArquivoImportacao = [];
+  alunosImportacaoPendentes = [];
+  $("#arquivoAlunos").value = "";
+  $("#resultadoImportacao").textContent = "";
+  $("#btnConfirmarImportacaoAlunos").disabled = true;
+});
+
+function formatarAgenda(agenda) {
+  const dias = ["", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const turnos = { manha: "manhã", tarde: "tarde" };
+  const porDia = new Map();
+  (agenda || []).forEach((slot) => {
+    const [dia, turno] = slot.split(":");
+    if (!porDia.has(dia)) porDia.set(dia, []);
+    porDia.get(dia).push(turnos[turno] || turno);
+  });
+  return [...porDia.entries()].map(([dia, turnosDia]) => `${dias[Number(dia)]}: ${turnosDia.join(" e ")}`).join(" · ") || "Sem agenda semanal";
+}
+
+function renderizarTurmas() {
+  const lista = $("#listaTurmas");
+  lista.replaceChildren();
+  if (!cadastroTurmas.length) {
+    const vazio = document.createElement("li");
+    vazio.className = "list-group-item text-muted";
+    vazio.textContent = "Nenhuma turma cadastrada.";
+    lista.append(vazio);
+    return;
+  }
+  cadastroTurmas.forEach((registro) => {
+    const item = document.createElement("li");
+    item.className = "list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap";
+    const info = document.createElement("div");
+    const nome = document.createElement("strong");
+    nome.textContent = registro.nome + (registro.arquivada ? " (arquivada)" : "");
+    const agenda = document.createElement("div");
+    agenda.className = "small text-muted";
+    agenda.textContent = formatarAgenda(registro.agenda);
+    info.append(nome, agenda);
+    const acoes = document.createElement("div");
+    acoes.className = "d-flex gap-2";
+    const editar = document.createElement("button");
+    editar.type = "button";
+    editar.className = "btn-ghost";
+    editar.textContent = "Editar";
+    editar.addEventListener("click", () => editarTurma(registro));
+    const arquivar = document.createElement("button");
+    arquivar.type = "button";
+    arquivar.className = "btn-ghost";
+    arquivar.textContent = registro.arquivada ? "Reativar" : "Arquivar";
+    arquivar.addEventListener("click", () => alternarArquivoTurma(registro));
+    acoes.append(editar, arquivar);
+    item.append(info, acoes);
+    lista.append(item);
+  });
+}
+
+let turmaEmEdicao = null;
+function cancelarEdicaoTurma() {
+  turmaEmEdicao = null;
+  $("#formTurma").reset();
+  $("#btnSalvarTurma").textContent = "Adicionar turma";
+  $("#cancelarEdicaoTurma").classList.add("d-none");
+  $("#erroTurma").textContent = "";
+}
+
+function editarTurma(registro) {
+  turmaEmEdicao = registro.nome;
+  $("#nomeTurma").value = registro.nome;
+  document.querySelectorAll('[name="agendaTurma"]').forEach((input) => {
+    input.checked = (registro.agenda || []).includes(input.value);
+  });
+  $("#btnSalvarTurma").textContent = "Salvar alterações";
+  $("#cancelarEdicaoTurma").classList.remove("d-none");
+  $("#nomeTurma").focus();
+}
+
+async function alternarArquivoTurma(registro) {
+  const arquivada = !registro.arquivada;
+  const resultado = await Swal.fire({
+    title: arquivada ? `Arquivar ${esc(registro.nome)}?` : `Reativar ${esc(registro.nome)}?`,
+    text: arquivada ? "A turma e o histórico serão preservados; ela deixará de aparecer para novas chamadas." : "A turma voltará a aparecer nas chamadas.",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: arquivada ? "Arquivar" : "Reativar",
+    cancelButtonText: "Cancelar",
+  });
+  if (!resultado.isConfirmed) return;
+  try {
+    await arquivarTurma(registro.nome, arquivada);
+    popularTurmas();
+    renderizarTurmas();
+    atualizarSistema();
+    toast("success", arquivada ? "Turma arquivada" : "Turma reativada");
+  } catch (error) {
+    console.error(error);
+    falhaSalvar(error);
+  }
+}
+
+$("#modalTurmas").addEventListener("show.bs.modal", () => {
+  cancelarEdicaoTurma();
+  renderizarTurmas();
+});
+$("#modalTurmas").addEventListener("shown.bs.modal", () => $("#nomeTurma").focus());
+$("#modalTurmas").addEventListener("hidden.bs.modal", cancelarEdicaoTurma);
+$("#cancelarEdicaoTurma").addEventListener("click", cancelarEdicaoTurma);
+
+$("#formTurma").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const nome = $("#nomeTurma").value.trim();
+  const erro = $("#erroTurma");
+  erro.textContent = "";
+  if (!nome) {
+    erro.textContent = "Informe o nome da turma.";
+    $("#nomeTurma").focus();
+    return;
+  }
+  const duplicada = cadastroTurmas.some((r) => r.nome !== turmaEmEdicao && r.nome.toLocaleLowerCase("pt-BR") === nome.toLocaleLowerCase("pt-BR"));
+  if (duplicada) {
+    erro.textContent = "Essa turma já está cadastrada.";
+    $("#nomeTurma").focus();
+    return;
+  }
+  const agenda = [...document.querySelectorAll('[name="agendaTurma"]:checked')].map((input) => input.value);
+  const botao = $("#btnSalvarTurma");
+  const estavaEditando = turmaEmEdicao !== null;
+  botao.disabled = true;
+  try {
+    await salvarTurma(nome, agenda, turmaEmEdicao);
+    cancelarEdicaoTurma();
+    popularTurmas();
+    renderizarTurmas();
+    atualizarSistema();
+    toast("success", estavaEditando ? "Turma atualizada" : "Turma cadastrada");
+  } catch (error) {
+    erro.textContent = error?.code === "23505" ? "Essa turma já está cadastrada." : "Não foi possível salvar a turma. Tente novamente.";
+    console.error(error);
+  } finally {
+    botao.disabled = false;
+  }
 });
 
 // ---------- Cadastro ----------
@@ -230,6 +478,7 @@ async function importarAgora() {
     localStorage.setItem("importado_ok", "1");
     $("#bannerImportar").classList.add("d-none");
     await carregarDados();
+    popularTurmas();
     atualizarSistema();
     toast("success", `Importado: ${r.alunos} aluno(s) e ${r.presencas} registro(s) de chamada`);
   } catch (e) {
@@ -246,6 +495,7 @@ async function importarAgora() {
   } catch (e) {
     return falhaSalvar(e);
   }
+  popularTurmas();
   atualizarSistema();
   verificarImportacao();
 })();

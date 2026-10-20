@@ -345,3 +345,67 @@ async function baixarRelatorio({ aluno, de, ate, completo }) {
   const doc = montarRelatorio({ aluno, de, ate, completo, logo, emitidoPor: typeof usuarioEmail !== "undefined" ? usuarioEmail : "" });
   doc.save(relNomeArquivo(aluno, de, ate, completo));
 }
+
+async function baixarRelatorioTurma({ turma, de, ate }) {
+  const logo = await relatorioLogo();
+  const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  const lista = alunos.filter((aluno) => aluno.turma === turma).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const registros = lista.map((aluno) => ({ aluno, ...relColetar(aluno, de, ate) }));
+  const total = registros.reduce((s, r) => ({ P: s.P + r.cont.P, F: s.F + r.cont.F, J: s.J + r.cont.J }), { P: 0, F: 0, J: 0 });
+  const chamadas = total.P + total.F + total.J;
+
+  relCabecalho(doc, true, logo);
+  let y = 46;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(17); doc.setTextColor(...REL.navy);
+  doc.text(`Turma ${turma}`, 16, y);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(...REL.muted);
+  doc.text("Período analisado", W - 16, y - 5.5, { align: "right" });
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...REL.navy);
+  doc.text(`${relBR(de)} a ${relBR(ate)}`, W - 16, y, { align: "right" });
+
+  y += 12;
+  y = relTitulo(doc, "Resumo da turma", y);
+  y = relResumo(doc, y, total, chamadas ? `${Math.round((total.P / chamadas) * 100)}%` : "-");
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...REL.muted);
+  doc.text(`${lista.length} aluno(s) · ${chamadas} registro(s) de frequência no período`, 16, y);
+  y += 8;
+
+  y = relNovaPagina(doc, y, 35);
+  y = relTitulo(doc, "Frequência por aluno", y);
+  if (!registros.length) {
+    y = relVazio(doc, y, "Nenhum aluno cadastrado nesta turma.");
+  } else {
+    y = relTabela(doc, y, ["Aluno", "Presenças", "Faltas", "Justificadas", "Presença"],
+      registros.map(({ aluno, cont }) => {
+        const n = cont.P + cont.F + cont.J;
+        return [aluno.nome, cont.P, cont.F, cont.J, n ? `${Math.round((cont.P / n) * 100)}%` : "-"];
+      }),
+      { colunas: { 0: { cellWidth: "auto" }, 1: { cellWidth: 25 }, 2: { cellWidth: 22 }, 3: { cellWidth: 30 }, 4: { cellWidth: 25 } } });
+  }
+
+  const ocorrencias = registros.flatMap(({ aluno, dias }) => dias
+    .map((d) => [relBR(d.data), REL_DIAS[relData(d.data).getDay()], aluno.nome, REL_STATUS[d.status]]));
+  y = relNovaPagina(doc, y, 30);
+  y = relTitulo(doc, "Registros de frequência", y);
+  if (ocorrencias.length) {
+    y = relTabela(doc, y, ["Data", "Dia da semana", "Aluno", "Situação"], ocorrencias,
+      { colStatus: 3, colunas: { 0: { cellWidth: 25 }, 1: { cellWidth: 38 }, 3: { cellWidth: 30 } } });
+  } else {
+    y = relVazio(doc, y, "Nenhum registro de frequência no período.");
+  }
+
+  const observacoes = registros.flatMap(({ aluno, obsLista }) => obsLista.map((o) => [relBR(o.data), aluno.nome, REL_STATUS[o.status] || "Sem registro", o.texto]));
+  y = relNovaPagina(doc, y, 30);
+  y = relTitulo(doc, "Observações do período", y);
+  if (observacoes.length) {
+    relTabela(doc, y, ["Data", "Aluno", "Situação", "Observação"], observacoes,
+      { colStatus: 2, colunas: { 0: { cellWidth: 25 }, 1: { cellWidth: 45 }, 2: { cellWidth: 30 } } });
+  } else {
+    relVazio(doc, y, "Nenhuma observação registrada no período.");
+  }
+
+  relRodape(doc, typeof usuarioEmail !== "undefined" ? usuarioEmail : "");
+  const slug = turma.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  doc.save(`relatorio-turma-${slug}-${de}-a-${ate}.pdf`);
+}

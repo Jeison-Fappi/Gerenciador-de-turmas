@@ -49,6 +49,13 @@
           </div>
         </div>
 
+        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+          <span id="estadoAula" class="chip"></span>
+          <div class="d-flex gap-2">
+            <button class="btn-ghost" id="restaurarAgenda" type="button">Restaurar agenda</button>
+            <button class="btn-blue" id="alternarAula" type="button">Ativar aula neste dia</button>
+          </div>
+        </div>
         <p class="dia-label"><span id="diaLabel"></span> <span id="avisoFds" class="chip d-none">fim de semana</span></p>
 
         <section class="strip s4">
@@ -68,7 +75,6 @@
       </main>
     </div>
 
-    <script src="js/turmas.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
     <script src="js/config.js"></script>
     <script src="js/dados.js"></script>

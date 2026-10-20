@@ -33,6 +33,8 @@
           </div>
           <div class="head-actions">
             <a class="btn-ghost" href="graficos.html"><i class="bi bi-bar-chart-line"></i> Ver gráficos</a>
+            <button class="btn-ghost" data-bs-toggle="modal" data-bs-target="#modalTurmas"><i class="bi bi-collection"></i> Turmas</button>
+            <button class="btn-ghost" data-bs-toggle="modal" data-bs-target="#modalImportarAlunos"><i class="bi bi-file-earmark-arrow-up"></i> Importar alunos</button>
             <button class="btn-ghost" data-bs-toggle="modal" data-bs-target="#modalNovo"><i class="bi bi-person-plus-fill"></i> Novo aluno</button>
             <a class="btn-blue" href="chamada.html"><i class="bi bi-clipboard2-check-fill"></i> Fazer chamada</a>
           </div>
@@ -72,6 +74,31 @@
       </main>
     </div>
 
+    <div class="modal fade" id="modalImportarAlunos" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Importar alunos</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="turmaImportacao">Turma</label>
+            <select id="turmaImportacao" class="form-select"><option value="">Selecione a turma</option></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="arquivoAlunos">Arquivo CSV ou Excel</label>
+            <input id="arquivoAlunos" class="form-control" type="file" accept=".csv,.xlsx,.xls" />
+            <div class="form-text">A primeira linha deve conter a coluna Nome. Cada linha seguinte deve ter um aluno.</div>
+          </div>
+          <div id="resultadoImportacao" class="small" role="status"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+          <button id="btnConfirmarImportacaoAlunos" type="button" class="btn-blue" disabled>Importar alunos</button>
+        </div>
+      </div></div>
+    </div>
+
     <!-- Modal: novo aluno -->
     <div class="modal fade" id="modalNovo" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
@@ -94,6 +121,42 @@
         <div class="modal-footer">
           <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
           <button type="button" class="btn-blue" onclick="cadastrarAluno()"><i class="bi bi-check2"></i> Cadastrar</button>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="modal fade" id="modalTurmas" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Turmas</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formTurma">
+            <label class="form-label" for="nomeTurma">Nome da turma</label>
+            <input id="nomeTurma" type="text" maxlength="60" class="form-control mb-3" placeholder="Ex.: SQE1" />
+            <div class="form-label">Agenda semanal</div>
+            <div class="table-responsive mb-3">
+              <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>Dia</th><th>Manhã</th><th>Tarde</th></tr></thead>
+                <tbody>
+                  <tr><th>Segunda</th><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="1:manha" aria-label="Segunda de manhã" /></td><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="1:tarde" aria-label="Segunda à tarde" /></td></tr>
+                  <tr><th>Terça</th><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="2:manha" aria-label="Terça de manhã" /></td><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="2:tarde" aria-label="Terça à tarde" /></td></tr>
+                  <tr><th>Quarta</th><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="3:manha" aria-label="Quarta de manhã" /></td><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="3:tarde" aria-label="Quarta à tarde" /></td></tr>
+                  <tr><th>Quinta</th><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="4:manha" aria-label="Quinta de manhã" /></td><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="4:tarde" aria-label="Quinta à tarde" /></td></tr>
+                  <tr><th>Sexta</th><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="5:manha" aria-label="Sexta de manhã" /></td><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="5:tarde" aria-label="Sexta à tarde" /></td></tr>
+                  <tr><th>Sábado</th><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="6:manha" aria-label="Sábado de manhã" /></td><td><input class="form-check-input" type="checkbox" name="agendaTurma" value="6:tarde" aria-label="Sábado à tarde" /></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="erroTurma" class="text-danger small mb-2" role="alert"></div>
+            <div class="d-flex gap-2 mb-4">
+              <button id="btnSalvarTurma" class="btn-blue" type="submit">Adicionar turma</button>
+              <button id="cancelarEdicaoTurma" class="btn-ghost d-none" type="button">Cancelar edição</button>
+            </div>
+          </form>
+          <h6 class="mb-2">Turmas cadastradas</h6>
+          <ul id="listaTurmas" class="list-group"></ul>
         </div>
       </div></div>
     </div>
@@ -131,7 +194,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js"></script>
-    <script src="js/turmas.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
     <script src="js/config.js"></script>
     <script src="js/dados.js"></script>
