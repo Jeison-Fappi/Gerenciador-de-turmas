@@ -61,7 +61,7 @@ function abrirDia(ds) {
     showCancelButton: true,
     confirmButtonText: "Salvar",
     cancelButtonText: "Cancelar",
-    confirmButtonColor: "#0095da",
+    confirmButtonColor: "#0094d6",
     didOpen: () => {
       $("#segDia").addEventListener("click", (e) => {
         const btn = e.target.closest("button");
@@ -131,7 +131,7 @@ function abrirRelatorio() {
     showCancelButton: true,
     confirmButtonText: "Baixar PDF",
     cancelButtonText: "Cancelar",
-    confirmButtonColor: "#0095da",
+    confirmButtonColor: "#0094d6",
     didOpen: () => {
       $("#segTipo").addEventListener("click", (e) => {
         const b = e.target.closest("button");

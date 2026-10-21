@@ -1,8 +1,8 @@
 // RELATÓRIO EM PDF DO ALUNO (jsPDF + jsPDF-AutoTable)
 
 const REL = {
-  navy: [6, 40, 61], blue: [0, 149, 218], ok: [47, 167, 122], risk: [180, 35, 56],
-  warn: [224, 168, 0], warnTxt: [154, 103, 0], sky: [232, 244, 251], muted: [91, 115, 133], line: [220, 231, 238],
+  navy: [23, 41, 56], blue: [0, 148, 214], ok: [0, 133, 66], risk: [201, 9, 105],
+  warn: [241, 139, 33], warnTxt: [117, 71, 0], sky: [219, 238, 252], muted: [82, 101, 114], line: [215, 228, 232],
 };
 const REL_STATUS = { P: "Presente", F: "Falta", J: "Justificada" };
 const REL_DIAS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -79,7 +79,7 @@ function relCabecalho(doc, completo, logo) {
   doc.setFillColor(...REL.navy);
   doc.rect(0, 0, W, 32, "F");
   let x = 16;
-  if (logo) { doc.addImage(logo, "PNG", 16, 8, 16, 16); x = 36; }
+  if (logo) { doc.addImage(logo, "PNG", 16, 11, 38, 8); x = 62; }
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
@@ -322,7 +322,7 @@ let relLogoCache;
 async function relatorioLogo() {
   if (relLogoCache !== undefined) return relLogoCache;
   try {
-    const blob = await (await fetch("img/logo.png")).blob();
+    const blob = await (await fetch("img/rfs-logo-negative.png")).blob();
     relLogoCache = await new Promise((ok, erro) => {
       const r = new FileReader();
       r.onload = () => ok(r.result);

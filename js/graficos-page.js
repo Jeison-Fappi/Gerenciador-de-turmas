@@ -1,7 +1,7 @@
 // PÁGINA DE GRÁFICOS
 
 let dados = [];
-const COR = { regular: "#2fa77a", atencao: "#e0a800", risco: "#b42338", marca: "#0095da", apagado: "#c9dbe6" };
+const COR = { regular: "#008542", atencao: "#f18b21", risco: "#c90969", marca: "#0094d6", apagado: "#c9dbe6" };
 const graficos = {};
 let turmaAtual = "TODAS";
 
@@ -150,7 +150,7 @@ if (typeof Chart === "undefined") {
 } else if (dados.length === 0) {
   mostrarAviso('Ainda não há alunos cadastrados. <a href="index.html">Cadastre alunos no painel</a> para ver os gráficos.');
 } else {
-  Chart.defaults.font.family = "'Manrope', sans-serif";
+  Chart.defaults.font.family = "Arial, sans-serif";
   Chart.defaults.color = "#5b7385";
   Chart.defaults.maintainAspectRatio = false;
   Chart.defaults.scale.grid.color = "#e7eef3";

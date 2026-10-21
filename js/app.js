@@ -484,7 +484,7 @@ function excluirAluno(id) {
     showCancelButton: true,
     confirmButtonText: "Excluir",
     cancelButtonText: "Cancelar",
-    confirmButtonColor: "#b42338",
+    confirmButtonColor: "#c90969",
   }).then(async (r) => {
     if (r.isConfirmed) {
       try {
