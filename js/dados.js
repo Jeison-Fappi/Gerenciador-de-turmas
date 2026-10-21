@@ -239,6 +239,14 @@ async function urlFotoTurma(caminho, nomeDownload = null) {
   return data.signedUrl;
 }
 
+async function removerFotoTurma(id, caminho) {
+  const { error: erroArquivo } = await sb.storage.from(BUCKET_FOTOS_TURMAS).remove([caminho]);
+  if (erroArquivo) throw erroArquivo;
+
+  const { error } = await sb.from("fotos_turma").delete().eq("id", id).eq("storage_path", caminho);
+  if (error) throw error;
+}
+
 // ---------- Presenças ----------
 function statusDoDia(alunoId, data) {
   return (presencas[data] || {})[alunoId] || "";

@@ -123,13 +123,14 @@ function configurarRelatorioTurma() {
     const turma = select.value;
     const de = document.getElementById("relatorioDe").value;
     const ateRelatorio = document.getElementById("relatorioAte").value;
+    const formato = document.getElementById("formatoRelatorioTurma").value;
     if (!turma || !de || !ateRelatorio || de > ateRelatorio) {
       alert("Selecione uma turma e informe um período válido.");
       return;
     }
     botao.disabled = true;
     try {
-      await baixarRelatorioTurma({ turma, de, ate: ateRelatorio });
+      await exportarRelatorioTurma({ turma, de, ate: ateRelatorio, formato });
     } catch (error) {
       console.error(error);
       alert("Não foi possível gerar o relatório. Recarregue a página e tente novamente.");

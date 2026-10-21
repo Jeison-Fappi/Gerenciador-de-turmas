@@ -77,6 +77,9 @@ async function carregarFotosTurma() {
               <button class="btn-ghost" type="button" data-baixar-foto="${esc(foto.id)}" ${foto.url ? "" : "disabled"}>
                 <i class="bi bi-download"></i> Baixar
               </button>
+              <button class="btn-ghost text-danger" type="button" data-excluir-foto="${esc(foto.id)}">
+                <i class="bi bi-trash"></i> Excluir
+              </button>
             </div>
           </article>`).join("")
       : '<div class="fotos-vazio">Ainda não há fotos cadastradas para esta turma.</div>';
@@ -261,24 +264,43 @@ fotos$("#galeriaFotos").addEventListener("click", async (event) => {
     return;
   }
   const botao = event.target.closest("[data-baixar-foto]");
-  if (!botao) return;
-  const foto = fotosTurmaAtual.find((item) => item.id === botao.dataset.baixarFoto);
-  if (!foto) return;
-  botao.disabled = true;
+  if (botao) {
+    const foto = fotosTurmaAtual.find((item) => item.id === botao.dataset.baixarFoto);
+    if (!foto) return;
+    botao.disabled = true;
+    try {
+      const url = await urlFotoTurma(foto.storage_path, foto.nome_arquivo);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = foto.nome_arquivo;
+      link.rel = "noopener";
+      document.body.append(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error(error);
+      statusFotos("Não foi possível baixar a imagem. Atualize a página e tente novamente.", true);
+    } finally {
+      botao.disabled = false;
+    }
+    return;
+  }
+
+  const excluir = event.target.closest("[data-excluir-foto]");
+  if (!excluir) return;
+  const foto = fotosTurmaAtual.find((item) => item.id === excluir.dataset.excluirFoto);
+  if (!foto || !window.confirm(`Excluir a foto "${foto.nome_arquivo}"? Essa ação não pode ser desfeita.`)) return;
+
+  excluir.disabled = true;
   try {
-    const url = await urlFotoTurma(foto.storage_path, foto.nome_arquivo);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = foto.nome_arquivo;
-    link.rel = "noopener";
-    document.body.append(link);
-    link.click();
-    link.remove();
+    await removerFotoTurma(foto.id, foto.storage_path);
+    statusFotos("Foto excluída.");
+    if (!fotos$("#visualizadorFotos").hidden) fecharVisualizadorFotos();
+    await carregarFotosTurma();
   } catch (error) {
     console.error(error);
-    statusFotos("Não foi possível baixar a imagem. Atualize a página e tente novamente.", true);
-  } finally {
-    botao.disabled = false;
+    statusFotos("Não foi possível excluir a foto. Atualize a página e tente novamente.", true);
+    excluir.disabled = false;
   }
 });
 
