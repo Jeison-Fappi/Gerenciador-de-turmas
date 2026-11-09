@@ -1,11 +1,11 @@
 // PÁGINA DE GRÁFICOS
 
 let dados = [];
-const COR = { regular: "#2fa77a", atencao: "#e0a800", risco: "#b42338", marca: "#0095da", apagado: "#c9dbe6" };
+const COR = { regular: "#008542", atencao: "#f18b21", risco: "#c90969", marca: "#0094d6", apagado: "#c9dbe6" };
 const graficos = {};
 let turmaAtual = "TODAS";
 
-const situacao = (f) => (f >= 5 ? "risco" : f >= 3 ? "atencao" : "regular");
+const situacao = (f) => (f >= FALTAS_RISCO ? "risco" : f >= FALTAS_ALERTA ? "atencao" : "regular");
 
 function mostrarAviso(msg) {
   document.getElementById("conteudo").classList.add("d-none");
@@ -40,7 +40,7 @@ function renderizar() {
   document.getElementById("kAlunos").innerText = lista.length;
   document.getElementById("kFaltas").innerText = total;
   document.getElementById("kMedia").innerText = (lista.length ? total / lista.length : 0).toFixed(1);
-  const risco = lista.filter((a) => a.faltas >= 5).length;
+  const risco = lista.filter((a) => a.faltas >= FALTAS_RISCO).length;
   document.getElementById("kRisco").innerText = risco;
   document.getElementById("kRisco").parentElement.classList.toggle("has", risco > 0);
 
@@ -103,21 +103,59 @@ function renderizar() {
   });
 }
 
+function configurarRelatorioTurma() {
+  const select = document.getElementById("turmaRelatorio");
+  const hoje = new Date();
+  const inicioAno = `${hoje.getFullYear()}-01-01`;
+  const ate = dataISO(hoje);
+  document.getElementById("relatorioDe").value = inicioAno;
+  document.getElementById("relatorioAte").value = ate;
+  select.replaceChildren();
+  cadastroTurmas.forEach((registro) => {
+    const option = document.createElement("option");
+    option.value = registro.nome;
+    option.textContent = registro.arquivada ? `${registro.nome} (arquivada)` : registro.nome;
+    select.append(option);
+  });
+  const botao = document.getElementById("baixarRelatorioTurma");
+  botao.disabled = cadastroTurmas.length === 0;
+  botao.addEventListener("click", async () => {
+    const turma = select.value;
+    const de = document.getElementById("relatorioDe").value;
+    const ateRelatorio = document.getElementById("relatorioAte").value;
+    const formato = document.getElementById("formatoRelatorioTurma").value;
+    if (!turma || !de || !ateRelatorio || de > ateRelatorio) {
+      alert("Selecione uma turma e informe um período válido.");
+      return;
+    }
+    botao.disabled = true;
+    try {
+      await exportarRelatorioTurma({ turma, de, ate: ateRelatorio, formato });
+    } catch (error) {
+      console.error(error);
+      alert("Não foi possível gerar o relatório. Recarregue a página e tente novamente.");
+    } finally {
+      botao.disabled = false;
+    }
+  });
+}
+
 // ---------- Início ----------
 (async () => {
 if (!(await exigirLogin())) return;
 await carregarDados();
-dados = alunos.map((a) => ({ ...a, faltas: faltasDoAluno(a) }));
+dados = alunosAtivos().map((a) => ({ ...a, faltas: faltasDoAluno(a) }));
 if (typeof Chart === "undefined") {
   mostrarAviso("Não foi possível carregar a biblioteca de gráficos. Verifique a conexão com a internet e recarregue a página.");
 } else if (dados.length === 0) {
   mostrarAviso('Ainda não há alunos cadastrados. <a href="index.html">Cadastre alunos no painel</a> para ver os gráficos.');
 } else {
-  Chart.defaults.font.family = "'Manrope', sans-serif";
+  Chart.defaults.font.family = "Arial, sans-serif";
   Chart.defaults.color = "#5b7385";
   Chart.defaults.maintainAspectRatio = false;
   Chart.defaults.scale.grid.color = "#e7eef3";
   desenharChips();
   renderizar();
 }
+configurarRelatorioTurma();
 })();

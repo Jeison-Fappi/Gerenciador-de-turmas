@@ -6,6 +6,9 @@ const sb = configurado ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
 
 let usuarioEmail = "";
 let alunos = [];
+let turmas = [];
+let cadastroTurmas = [];
+let excecoesAula = [];
 let presencas = {}; 
 let observacoes = {}; 
 
@@ -44,7 +47,7 @@ async function buscarTudo(tabela, ordem) {
   while (true) {
     let q = sb.from(tabela).select("*");
     ordem.forEach((c) => (q = q.order(c)));
-    const { data, error } = await q.range(de, de + 999); // o Supabase devolve no máximo 1000 por vez
+    const { data, error } = await q.range(de, de + 999);
     if (error) throw error;
     todas = todas.concat(data);
     if (data.length < 1000) break;
@@ -53,21 +56,84 @@ async function buscarTudo(tabela, ordem) {
   return todas;
 }
 
-const doBanco = (r) => ({ id: r.id, nome: r.nome, turma: r.turma, faltasAnteriores: r.faltas_anteriores });
+const doBanco = (r) => ({ id: r.id, nome: r.nome, turma: r.turma, faltasAnteriores: r.faltas_anteriores, arquivado: Boolean(r.arquivado) });
+const FALTAS_ALERTA = 7;
+const FALTAS_RISCO = 10;
+const alunosAtivos = () => alunos.filter((aluno) => !aluno.arquivado);
 const porNome = (a, b) => a.nome.localeCompare(b.nome, "pt-BR");
 
 async function carregarDados() {
-  const [a, p, o] = await Promise.all([
+  const [a, p, o, t, e] = await Promise.all([
     buscarTudo("alunos", ["nome"]),
     buscarTudo("presencas", ["data", "aluno_id"]),
     buscarTudo("observacoes", ["data", "aluno_id"]),
+    buscarTudo("turmas", ["nome"]),
+    buscarTudo("excecoes_aula", ["data", "turma"]),
   ]);
 
   alunos = a.map(doBanco);
+  cadastroTurmas = t;
+  turmas = t.filter((r) => !r.arquivada).map((r) => r.nome);
+  excecoesAula = e;
   presencas = {};
   p.forEach((r) => ((presencas[r.data] ||= {})[r.aluno_id] = r.status));
   observacoes = {};
   o.forEach((r) => ((observacoes[r.aluno_id] ||= {})[r.data] = r.texto));
+}
+
+// ---------- Turmas e agenda ----------
+function ordenarCadastroTurmas() {
+  cadastroTurmas.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  turmas = cadastroTurmas.filter((r) => !r.arquivada).map((r) => r.nome);
+}
+
+async function salvarTurma(nome, agenda, nomeAnterior = null) {
+  const query = nomeAnterior
+    ? sb.from("turmas").update({ nome, agenda }).eq("nome", nomeAnterior)
+    : sb.from("turmas").insert({ nome, agenda });
+  const { data, error } = await query.select().single();
+  if (error) throw error;
+  if (nomeAnterior) alunos.forEach((a) => { if (a.turma === nomeAnterior) a.turma = nome; });
+  const index = cadastroTurmas.findIndex((r) => r.nome === nomeAnterior);
+  if (index >= 0) cadastroTurmas[index] = data;
+  else cadastroTurmas.push(data);
+  ordenarCadastroTurmas();
+  return data;
+}
+
+async function arquivarTurma(nome, arquivada) {
+  const { data, error } = await sb.from("turmas").update({ arquivada }).eq("nome", nome).select().single();
+  if (error) throw error;
+  const index = cadastroTurmas.findIndex((r) => r.nome === nome);
+  if (index >= 0) cadastroTurmas[index] = data;
+  ordenarCadastroTurmas();
+}
+
+function excecaoAula(turma, data) {
+  return excecoesAula.find((r) => r.turma === turma && r.data === data) || null;
+}
+
+function aulaDaTurma(turmaNome, data) {
+  const registro = cadastroTurmas.find((r) => r.nome === turmaNome);
+  if (!registro || registro.arquivada) return false;
+  const excecao = excecaoAula(turmaNome, data);
+  if (excecao) return excecao.ativa;
+  const diaSemana = new Date(`${data}T12:00:00`).getDay();
+  return (registro.agenda || []).some((horario) => Number(horario.split(":")[0]) === diaSemana);
+}
+
+async function salvarExcecaoAula(turma, data, ativa) {
+  const { error } = await sb.from("excecoes_aula").upsert({ turma, data, ativa }, { onConflict: "turma,data" });
+  if (error) throw error;
+  const atual = excecaoAula(turma, data);
+  if (atual) atual.ativa = ativa;
+  else excecoesAula.push({ turma, data, ativa });
+}
+
+async function restaurarAgendaAula(turma, data) {
+  const { error } = await sb.from("excecoes_aula").delete().eq("turma", turma).eq("data", data);
+  if (error) throw error;
+  excecoesAula = excecoesAula.filter((r) => r.turma !== turma || r.data !== data);
 }
 
 // ---------- Alunos ----------
@@ -84,6 +150,20 @@ async function criarAluno(nome, turma, faltasAnteriores = 0) {
   return novo;
 }
 
+async function criarAlunosEmLote(nomes, turma) {
+  const criados = [];
+  for (let i = 0; i < nomes.length; i += 250) {
+    const { data, error } = await sb.from("alunos")
+      .insert(nomes.slice(i, i + 250).map((nome) => ({ nome, turma })))
+      .select();
+    if (error) throw error;
+    criados.push(...data.map(doBanco));
+  }
+  alunos.push(...criados);
+  alunos.sort(porNome);
+  return criados.length;
+}
+
 async function atualizarAluno(a) {
   const { error } = await sb
     .from("alunos")
@@ -93,8 +173,15 @@ async function atualizarAluno(a) {
   alunos.sort(porNome);
 }
 
+async function atualizarArquivoAluno(id, arquivado) {
+  const { data, error } = await sb.from("alunos").update({ arquivado }).eq("id", id).select().single();
+  if (error) throw error;
+  const aluno = alunos.find((item) => item.id === id);
+  if (aluno) aluno.arquivado = data.arquivado;
+}
+
 async function removerAluno(id) {
-  const { error } = await sb.from("alunos").delete().eq("id", id); 
+  const { error } = await sb.from("alunos").delete().eq("id", id);
   if (error) throw error;
   alunos = alunos.filter((a) => a.id !== id);
   for (const dia in presencas) {
@@ -102,6 +189,62 @@ async function removerAluno(id) {
     if (Object.keys(presencas[dia]).length === 0) delete presencas[dia];
   }
   delete observacoes[id];
+}
+
+const BUCKET_FOTOS_TURMAS = "fotos-turmas";
+const TIPOS_FOTO_TURMA = new Set(["image/jpeg", "image/png", "image/webp"]);
+const TAMANHO_MAXIMO_FOTO = 10 * 1024 * 1024;
+
+async function listarFotosTurma(turma) {
+  const { data, error } = await sb.from("fotos_turma")
+    .select("id, turma, storage_path, nome_arquivo, mime_type, tamanho_bytes, criado_em")
+    .eq("turma", turma)
+    .order("criado_em", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+async function enviarFotoTurma(arquivo, turma) {
+  if (!TIPOS_FOTO_TURMA.has(arquivo.type)) throw new Error("Use uma imagem JPG, PNG ou WebP.");
+  if (arquivo.size > TAMANHO_MAXIMO_FOTO) throw new Error("Cada imagem pode ter no máximo 10 MB.");
+
+  const extensoes = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+  const caminho = `${crypto.randomUUID()}.${extensoes[arquivo.type]}`;
+  const { error: erroUpload } = await sb.storage.from(BUCKET_FOTOS_TURMAS).upload(caminho, arquivo, {
+    contentType: arquivo.type,
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (erroUpload) throw erroUpload;
+
+  const { data, error } = await sb.from("fotos_turma").insert({
+    turma,
+    storage_path: caminho,
+    nome_arquivo: arquivo.name.slice(0, 255),
+    mime_type: arquivo.type,
+    tamanho_bytes: arquivo.size,
+  }).select().single();
+
+  if (error) {
+    await sb.storage.from(BUCKET_FOTOS_TURMAS).remove([caminho]);
+    throw error;
+  }
+  return data;
+}
+
+async function urlFotoTurma(caminho, nomeDownload = null) {
+  const opcoes = nomeDownload ? { download: nomeDownload } : undefined;
+  const { data, error } = await sb.storage.from(BUCKET_FOTOS_TURMAS).createSignedUrl(caminho, 3600, opcoes);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+async function removerFotoTurma(id, caminho) {
+  const { error: erroArquivo } = await sb.storage.from(BUCKET_FOTOS_TURMAS).remove([caminho]);
+  if (erroArquivo) throw erroArquivo;
+
+  const { error } = await sb.from("fotos_turma").delete().eq("id", id).eq("storage_path", caminho);
+  if (error) throw error;
 }
 
 // ---------- Presenças ----------

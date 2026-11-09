@@ -19,6 +19,7 @@ create table if not exists equipe (
   criado_em timestamptz not null default now()
 );
 alter table equipe enable row level security;
+alter table excecoes_aula enable row level security;
 
 -- Pergunta "quem está logado é da equipe?"
 create or replace function public.eh_da_equipe()
@@ -41,11 +42,25 @@ on conflict (user_id) do nothing;
 
 -- Troca as regras antigas ("qualquer logado") por "só a equipe"
 drop policy if exists "time acessa alunos" on alunos;
+drop policy if exists "time acessa turmas" on turmas;
+drop policy if exists "equipe acessa turmas" on turmas;
+drop policy if exists "time acessa excecoes_aula" on excecoes_aula;
+drop policy if exists "equipe acessa excecoes_aula" on excecoes_aula;
 drop policy if exists "time acessa presencas" on presencas;
 drop policy if exists "time acessa observacoes" on observacoes;
 drop policy if exists "equipe acessa alunos" on alunos;
 drop policy if exists "equipe acessa presencas" on presencas;
 drop policy if exists "equipe acessa observacoes" on observacoes;
+
+create policy "equipe acessa turmas" on turmas
+  for all to authenticated
+  using ((select public.eh_da_equipe()))
+  with check ((select public.eh_da_equipe()));
+
+create policy "equipe acessa excecoes_aula" on excecoes_aula
+  for all to authenticated
+  using ((select public.eh_da_equipe()))
+  with check ((select public.eh_da_equipe()));
 
 create policy "equipe acessa alunos" on alunos
   for all to authenticated

@@ -1,8 +1,8 @@
 // RELATÓRIO EM PDF DO ALUNO (jsPDF + jsPDF-AutoTable)
 
 const REL = {
-  navy: [6, 40, 61], blue: [0, 149, 218], ok: [47, 167, 122], risk: [180, 35, 56],
-  warn: [224, 168, 0], warnTxt: [154, 103, 0], sky: [232, 244, 251], muted: [91, 115, 133], line: [220, 231, 238],
+  navy: [23, 41, 56], blue: [0, 148, 214], ok: [0, 133, 66], risk: [201, 9, 105],
+  warn: [241, 139, 33], warnTxt: [117, 71, 0], sky: [219, 238, 252], muted: [82, 101, 114], line: [215, 228, 232],
 };
 const REL_STATUS = { P: "Presente", F: "Falta", J: "Justificada" };
 const REL_DIAS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -79,7 +79,7 @@ function relCabecalho(doc, completo, logo) {
   doc.setFillColor(...REL.navy);
   doc.rect(0, 0, W, 32, "F");
   let x = 16;
-  if (logo) { doc.addImage(logo, "PNG", 16, 8, 16, 16); x = 36; }
+  if (logo) { doc.addImage(logo, "PNG", 16, 11, 38, 8); x = 62; }
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
@@ -322,7 +322,7 @@ let relLogoCache;
 async function relatorioLogo() {
   if (relLogoCache !== undefined) return relLogoCache;
   try {
-    const blob = await (await fetch("img/logo.png")).blob();
+    const blob = await (await fetch("img/rfs-logo-negative.png")).blob();
     relLogoCache = await new Promise((ok, erro) => {
       const r = new FileReader();
       r.onload = () => ok(r.result);
@@ -344,4 +344,179 @@ async function baixarRelatorio({ aluno, de, ate, completo }) {
   const logo = await relatorioLogo();
   const doc = montarRelatorio({ aluno, de, ate, completo, logo, emitidoPor: typeof usuarioEmail !== "undefined" ? usuarioEmail : "" });
   doc.save(relNomeArquivo(aluno, de, ate, completo));
+}
+
+function relDadosTurma({ turma, de, ate }) {
+  const lista = alunosAtivos().filter((aluno) => aluno.turma === turma).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const registros = lista.map((aluno) => ({ aluno, ...relColetar(aluno, de, ate) }));
+  const ids = new Set(lista.map((aluno) => String(aluno.id)));
+  const datasChamadas = new Set();
+  for (const [data, registrosDia] of Object.entries(presencas)) {
+    if (data < de || data > ate) continue;
+    if (Object.entries(registrosDia).some(([id, status]) => ids.has(String(id)) && ["P", "F", "J"].includes(status))) {
+      datasChamadas.add(data);
+    }
+  }
+  const total = registros.reduce((s, r) => ({ P: s.P + r.cont.P, F: s.F + r.cont.F, J: s.J + r.cont.J }), { P: 0, F: 0, J: 0 });
+  return { lista, registros, total, datasChamadas: [...datasChamadas].sort(), chamadas: total.P + total.F + total.J };
+}
+
+async function baixarRelatorioTurma({ turma, de, ate }) {
+  const logo = await relatorioLogo();
+  const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  const { lista, registros, total, datasChamadas, chamadas } = relDadosTurma({ turma, de, ate });
+
+  relCabecalho(doc, true, logo);
+  let y = 46;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(17); doc.setTextColor(...REL.navy);
+  doc.text(`Turma ${turma}`, 16, y);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(...REL.muted);
+  doc.text("Período analisado", W - 16, y - 5.5, { align: "right" });
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...REL.navy);
+  doc.text(`${relBR(de)} a ${relBR(ate)}`, W - 16, y, { align: "right" });
+
+  y += 12;
+  y = relTitulo(doc, "Resumo da turma", y);
+  y = relResumo(doc, y, total, chamadas ? `${Math.round((total.P / chamadas) * 100)}%` : "-");
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...REL.muted);
+  doc.text(`${lista.length} aluno(s) · ${chamadas} registro(s) de frequência · ${datasChamadas.length} chamada(s) lançada(s)`, 16, y);
+  y += 8;
+
+  y = relNovaPagina(doc, y, 35);
+  y = relTitulo(doc, "Frequência por aluno", y);
+  if (!registros.length) {
+    y = relVazio(doc, y, "Nenhum aluno cadastrado nesta turma.");
+  } else {
+    y = relTabela(doc, y, ["Aluno", "Presenças", "Faltas", "Justificadas", "Presença", "Faltas/chamadas"],
+      registros.map(({ aluno, cont }) => {
+        const n = cont.P + cont.F + cont.J;
+        const taxaFaltas = datasChamadas.length ? `${Math.round((cont.F / datasChamadas.length) * 100)}%` : "-";
+        return [aluno.nome, cont.P, cont.F, cont.J, n ? `${Math.round((cont.P / n) * 100)}%` : "-", taxaFaltas];
+      }),
+      { colunas: { 0: { cellWidth: "auto" }, 1: { cellWidth: 19 }, 2: { cellWidth: 15 }, 3: { cellWidth: 23 }, 4: { cellWidth: 19 }, 5: { cellWidth: 27 } } });
+  }
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...REL.muted);
+  y += 2;
+  doc.text("Faltas/chamadas compara as faltas registradas com os dias em que houve chamada lançada para a turma.", 16, y, { maxWidth: W - 32 });
+
+  const faltasContexto = registros.flatMap(({ aluno, dias, obsLista }) => dias
+    .filter((d) => d.status === "F")
+    .map((d) => {
+      const notas = obsLista.filter((o) => o.data === d.data).map((o) => o.texto).join(" · ");
+      return [relBR(d.data), aluno.nome, notas || "Sem observação registrada nesta data"];
+    }));
+  y = relNovaPagina(doc, y + 6, 30);
+  y = relTitulo(doc, "Faltas e contexto", y);
+  if (faltasContexto.length) {
+    y = relTabela(doc, y, ["Data", "Aluno", "Observação do dia"], faltasContexto,
+      { colunas: { 0: { cellWidth: 25 }, 1: { cellWidth: 50 }, 2: { cellWidth: "auto" } } });
+  } else {
+    y = relVazio(doc, y, "Nenhuma falta registrada no período.");
+  }
+
+  const ocorrencias = registros.flatMap(({ aluno, dias }) => dias
+    .map((d) => [relBR(d.data), REL_DIAS[relData(d.data).getDay()], aluno.nome, REL_STATUS[d.status]]));
+  y = relNovaPagina(doc, y, 30);
+  y = relTitulo(doc, "Registros de frequência", y);
+  if (ocorrencias.length) {
+    y = relTabela(doc, y, ["Data", "Dia da semana", "Aluno", "Situação"], ocorrencias,
+      { colStatus: 3, colunas: { 0: { cellWidth: 25 }, 1: { cellWidth: 38 }, 3: { cellWidth: 30 } } });
+  } else {
+    y = relVazio(doc, y, "Nenhum registro de frequência no período.");
+  }
+
+  const observacoes = registros.flatMap(({ aluno, obsLista }) => obsLista.map((o) => [relBR(o.data), aluno.nome, REL_STATUS[o.status] || "Sem registro", o.texto]));
+  y = relNovaPagina(doc, y, 30);
+  y = relTitulo(doc, "Observações do período", y);
+  if (observacoes.length) {
+    relTabela(doc, y, ["Data", "Aluno", "Situação", "Observação"], observacoes,
+      { colStatus: 2, colunas: { 0: { cellWidth: 25 }, 1: { cellWidth: 45 }, 2: { cellWidth: 30 } } });
+  } else {
+    relVazio(doc, y, "Nenhuma observação registrada no período.");
+  }
+
+  relRodape(doc, typeof usuarioEmail !== "undefined" ? usuarioEmail : "");
+  const slug = turma.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  doc.save(`relatorio-turma-${slug}-${de}-a-${ate}.pdf`);
+}
+
+function relPlanilhasTurma({ turma, de, ate }) {
+  const dados = relDadosTurma({ turma, de, ate });
+  const resumo = [
+    ["Turma", turma], ["Período", `${relBR(de)} a ${relBR(ate)}`],
+    ["Alunos", dados.lista.length], ["Chamadas lançadas", dados.datasChamadas.length],
+    ["Registros de frequência", dados.chamadas], ["Presenças", dados.total.P],
+    ["Faltas", dados.total.F], ["Justificadas", dados.total.J],
+    ["Presença nos registros", dados.chamadas ? `${Math.round((dados.total.P / dados.chamadas) * 100)}%` : "-"]
+  ];
+  const frequencia = [["Aluno", "Presenças", "Faltas", "Justificadas", "Registros", "Presença nos registros", "Chamadas da turma", "Faltas/chamadas"]];
+  dados.registros.forEach(({ aluno, cont }) => {
+    const n = cont.P + cont.F + cont.J;
+    frequencia.push([aluno.nome, cont.P, cont.F, cont.J, n, n ? `${Math.round((cont.P / n) * 100)}%` : "-", dados.datasChamadas.length, dados.datasChamadas.length ? `${Math.round((cont.F / dados.datasChamadas.length) * 100)}%` : "-"]);
+  });
+  const chamadas = [["Data", "Dia da semana", "Aluno", "Situação"]];
+  const observacoes = [["Data", "Aluno", "Situação", "Observação"]];
+  const faltasContexto = [["Data", "Aluno", "Observação do dia"]];
+  dados.registros.forEach(({ aluno, dias, obsLista }) => {
+    dias.forEach((d) => chamadas.push([relBR(d.data), REL_DIAS[relData(d.data).getDay()], aluno.nome, REL_STATUS[d.status]]));
+    obsLista.forEach((o) => observacoes.push([relBR(o.data), aluno.nome, REL_STATUS[o.status] || "Sem registro", o.texto]));
+    dias.filter((d) => d.status === "F").forEach((d) => {
+      const notas = obsLista.filter((o) => o.data === d.data).map((o) => o.texto).join(" · ");
+      faltasContexto.push([relBR(d.data), aluno.nome, notas || "Sem observação registrada nesta data"]);
+    });
+  });
+  return { dados, resumo, frequencia, chamadas, observacoes, faltasContexto };
+}
+
+function relNomeArquivoTurma(turma, de, ate, extensao) {
+  const slug = turma.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `relatorio-turma-${slug}-${de}-a-${ate}.${extensao}`;
+}
+
+function relCsvSeguro(valor) {
+  if (typeof valor !== "string") return valor;
+  return /^[=+@\-\t\r]/.test(valor) ? `'${valor}` : valor;
+}
+
+async function exportarRelatorioTurma({ turma, de, ate, formato }) {
+  if (formato === "pdf") return baixarRelatorioTurma({ turma, de, ate });
+  if (typeof XLSX === "undefined") throw new Error("A biblioteca de exportação não está disponível.");
+
+  const { dados, resumo, frequencia, chamadas, observacoes, faltasContexto } = relPlanilhasTurma({ turma, de, ate });
+  const workbook = XLSX.utils.book_new();
+  const planilhas = [
+    ["Resumo", resumo], ["Frequência por aluno", frequencia],
+    ["Chamadas", chamadas], ["Observações", observacoes], ["Faltas e contexto", faltasContexto]
+  ];
+  if (formato === "xlsx") {
+    planilhas.forEach(([nome, linhas]) => XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(linhas), nome));
+    XLSX.writeFile(workbook, relNomeArquivoTurma(turma, de, ate, "xlsx"));
+    return;
+  }
+
+  if (formato !== "csv") throw new Error("Formato de arquivo inválido.");
+  const linhasCsv = [["Tipo", "Data", "Turma", "Aluno", "Presenças", "Faltas", "Justificadas", "Registros", "Chamadas da turma", "Faltas/chamadas", "Situação", "Observação"]];
+  linhasCsv.push(["Resumo da turma", `${relBR(de)} a ${relBR(ate)}`, turma, "", dados.total.P, dados.total.F, dados.total.J, dados.chamadas, dados.datasChamadas.length, "", "", ""]);
+  dados.registros.forEach(({ aluno, cont, dias, obsLista }) => {
+    const n = cont.P + cont.F + cont.J;
+    const percentual = dados.datasChamadas.length ? `${Math.round((cont.F / dados.datasChamadas.length) * 100)}%` : "-";
+    linhasCsv.push(["Resumo do aluno", "", turma, aluno.nome, cont.P, cont.F, cont.J, n, dados.datasChamadas.length, percentual, "", ""]);
+    dias.forEach((d) => {
+      const nota = d.status === "F" ? obsLista.filter((o) => o.data === d.data).map((o) => o.texto).join(" · ") : "";
+      linhasCsv.push([d.status === "F" ? "Falta e contexto" : "Frequência", relBR(d.data), turma, aluno.nome, "", "", "", "", "", "", REL_STATUS[d.status], nota || (d.status === "F" ? "Sem observação registrada nesta data" : "")]);
+    });
+    obsLista.forEach((o) => linhasCsv.push(["Observação", relBR(o.data), turma, aluno.nome, "", "", "", "", "", "", REL_STATUS[o.status] || "Sem registro", o.texto]));
+  });
+  const csvSeguro = linhasCsv.map((linha) => linha.map(relCsvSeguro));
+  const csv = "\uFEFF" + XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(csvSeguro), { FS: ";" });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = relNomeArquivoTurma(turma, de, ate, "csv");
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

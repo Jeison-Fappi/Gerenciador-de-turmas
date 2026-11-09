@@ -26,7 +26,8 @@ function renderizar() {
     const ds = `${ano}-${String(mes + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const st = statusDoDia(alunoId, ds);
     const fds = [0, 6].includes((primeiro + d - 1) % 7) ? "fds" : "";
-    html += `<button class="cal-dia ${st} ${fds} ${ds === hoje ? "hoje" : ""}" onclick="abrirDia('${ds}')">
+    const aula = aulaDaTurma(aluno.turma, ds);
+    html += `<button class="cal-dia ${st} ${fds} ${ds === hoje ? "hoje" : ""} ${aula ? "" : "sem-aula"}" ${aula ? "" : "disabled title=\"Sem aula prevista. Ajuste a data na tela de Chamada.\""} onclick="abrirDia('${ds}')">
       <span>${d}</span><span class="tag">${TAGS[st] || ""}</span>
       ${obs[ds] ? '<i class="bi bi-chat-left-text-fill obs"></i>' : ""}
     </button>`;
@@ -46,6 +47,7 @@ function mudarMes(n) {
 }
 
 function abrirDia(ds) {
+  if (!aulaDaTurma(aluno.turma, ds)) return;
   const [y, m, d] = ds.split("-").map(Number);
   let st = statusDoDia(alunoId, ds);
   const obsAtual = obsDoAluno(alunoId)[ds] || "";
@@ -59,7 +61,7 @@ function abrirDia(ds) {
     showCancelButton: true,
     confirmButtonText: "Salvar",
     cancelButtonText: "Cancelar",
-    confirmButtonColor: "#0095da",
+    confirmButtonColor: "#0094d6",
     didOpen: () => {
       $("#segDia").addEventListener("click", (e) => {
         const btn = e.target.closest("button");
@@ -129,7 +131,7 @@ function abrirRelatorio() {
     showCancelButton: true,
     confirmButtonText: "Baixar PDF",
     cancelButtonText: "Cancelar",
-    confirmButtonColor: "#0095da",
+    confirmButtonColor: "#0094d6",
     didOpen: () => {
       $("#segTipo").addEventListener("click", (e) => {
         const b = e.target.closest("button");

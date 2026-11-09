@@ -7,20 +7,20 @@
     <link rel="icon" href="img/logo.png" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/app.css" />
   </head>
   <body>
     <div class="shell">
       <aside class="side">
         <a class="side-brand" href="index.html">
-          <img src="img/logo.png" width="38" height="38" alt="Residência" />
+          <img src="img/rfs-logo-negative.png" width="216" height="44" alt="Residência Full Stack 5.0" />
           <span>Gerenciador<br />de Turmas</span>
         </a>
         <nav class="side-nav">
           <a class="nav-i" href="index.html"><i class="bi bi-grid-1x2-fill"></i> Painel</a>
           <a class="nav-i on" href="chamada.html"><i class="bi bi-clipboard2-check-fill"></i> Chamada</a>
           <a class="nav-i" href="graficos.html"><i class="bi bi-bar-chart-line-fill"></i> Gráficos</a>
+          <a class="nav-i" href="fotos.html"><i class="bi bi-images"></i> Fotos</a>
         </nav>
       <div class="side-user"><span id="userEmail"></span><button onclick="sair()"><i class="bi bi-box-arrow-right"></i> Sair</button></div>
       </aside>
@@ -49,6 +49,13 @@
           </div>
         </div>
 
+        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+          <span id="estadoAula" class="chip"></span>
+          <div class="d-flex gap-2">
+            <button class="btn-ghost" id="restaurarAgenda" type="button">Restaurar agenda</button>
+            <button class="btn-blue" id="alternarAula" type="button">Ativar aula neste dia</button>
+          </div>
+        </div>
         <p class="dia-label"><span id="diaLabel"></span> <span id="avisoFds" class="chip d-none">fim de semana</span></p>
 
         <section class="strip s4">
@@ -68,7 +75,6 @@
       </main>
     </div>
 
-    <script src="js/turmas.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
     <script src="js/config.js"></script>
     <script src="js/dados.js"></script>
