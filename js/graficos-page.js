@@ -3,7 +3,10 @@
 let dados = [];
 const COR = { regular: "#008542", atencao: "#f18b21", risco: "#c90969", marca: "#0094d6", apagado: "#c9dbe6" };
 const graficos = {};
-let turmaAtual = "TODAS";
+let turmasSelecionadas = null;
+let turmasRelatorioSelecionadas = new Set();
+
+const turmaSelecionada = (nome) => turmasSelecionadas === null || turmasSelecionadas.has(nome);
 
 const situacao = (f) => (f >= FALTAS_RISCO ? "risco" : f >= FALTAS_ALERTA ? "atencao" : "regular");
 
@@ -22,11 +25,27 @@ function desenhar(id, config) {
 function desenharChips() {
   const box = document.getElementById("chips");
   box.innerHTML = ["TODAS", ...turmas]
-    .map((t) => `<button class="pill ${t === turmaAtual ? "on" : ""}" data-turma="${t}">${t === "TODAS" ? "Todas as turmas" : t}</button>`)
+    .map((t) => {
+      const ativa = t === "TODAS" ? turmasSelecionadas === null : turmaSelecionada(t);
+      const rotulo = t === "TODAS" ? "Todas as turmas" : esc(t);
+      return `<button type="button" class="pill ${ativa ? "on" : ""}" data-turma="${esc(t)}" aria-pressed="${ativa}">${rotulo}</button>`;
+    })
     .join("");
   box.querySelectorAll(".pill").forEach((b) =>
     b.addEventListener("click", () => {
-      turmaAtual = b.dataset.turma;
+      const turma = b.dataset.turma;
+      if (turma === "TODAS") {
+        turmasSelecionadas = null;
+      } else {
+        if (turmasSelecionadas === null) turmasSelecionadas = new Set(turmas);
+        if (turmasSelecionadas.has(turma)) {
+          if (turmasSelecionadas.size === 1) return;
+          turmasSelecionadas.delete(turma);
+        } else {
+          turmasSelecionadas.add(turma);
+        }
+        if (turmasSelecionadas.size === turmas.length) turmasSelecionadas = null;
+      }
       desenharChips();
       renderizar();
     }),
@@ -34,7 +53,7 @@ function desenharChips() {
 }
 
 function renderizar() {
-  const lista = dados.filter((a) => turmaAtual === "TODAS" || a.turma === turmaAtual);
+  const lista = dados.filter((a) => turmaSelecionada(a.turma));
   const total = lista.reduce((s, a) => s + a.faltas, 0);
 
   document.getElementById("kAlunos").innerText = lista.length;
@@ -46,8 +65,11 @@ function renderizar() {
 
   //Faltas por turma
   const porTurma = {};
-  turmas.forEach((t) => (porTurma[t] = 0));
-  dados.forEach((a) => (porTurma[a.turma] = (porTurma[a.turma] || 0) + a.faltas));
+  const nomesSelecionados = turmasSelecionadas === null
+    ? [...new Set([...turmas, ...dados.map((a) => a.turma)])]
+    : turmas.filter((t) => turmasSelecionadas.has(t));
+  nomesSelecionados.forEach((t) => (porTurma[t] = 0));
+  lista.forEach((a) => (porTurma[a.turma] = (porTurma[a.turma] || 0) + a.faltas));
   const nomes = Object.keys(porTurma);
 
   desenhar("graficoTurmas", {
@@ -56,7 +78,7 @@ function renderizar() {
       labels: nomes,
       datasets: [{
         data: nomes.map((n) => porTurma[n]),
-        backgroundColor: nomes.map((n) => (turmaAtual === "TODAS" || n === turmaAtual ? COR.marca : COR.apagado)),
+        backgroundColor: nomes.map(() => COR.marca),
         borderRadius: 8,
         maxBarThickness: 56,
       }],
@@ -104,33 +126,82 @@ function renderizar() {
 }
 
 function configurarRelatorioTurma() {
-  const select = document.getElementById("turmaRelatorio");
+  const lista = document.getElementById("turmaRelatorio");
+  const resumo = document.getElementById("resumoTurmasRelatorio");
   const hoje = new Date();
   const inicioAno = `${hoje.getFullYear()}-01-01`;
   const ate = dataISO(hoje);
   document.getElementById("relatorioDe").value = inicioAno;
   document.getElementById("relatorioAte").value = ate;
-  select.replaceChildren();
+  lista.replaceChildren();
+  const opcaoTodas = document.createElement("label");
+  opcaoTodas.className = "opcao-turma-relatorio";
+  const checkboxTodas = document.createElement("input");
+  checkboxTodas.type = "checkbox";
+  checkboxTodas.disabled = cadastroTurmas.length === 0;
+  checkboxTodas.addEventListener("change", () => {
+    turmasRelatorioSelecionadas = checkboxTodas.checked
+      ? new Set(cadastroTurmas.map((registro) => registro.nome))
+      : new Set();
+    lista.querySelectorAll("input[data-turma]").forEach((checkbox) => {
+      checkbox.checked = turmasRelatorioSelecionadas.has(checkbox.dataset.turma);
+    });
+    atualizarResumo();
+  });
+  const nomeTodas = document.createElement("span");
+  nomeTodas.textContent = "Todas as turmas";
+  opcaoTodas.append(checkboxTodas, nomeTodas);
+  lista.append(opcaoTodas);
+  const separador = document.createElement("div");
+  separador.className = "separador-turmas-relatorio";
+  lista.append(separador);
+
   cadastroTurmas.forEach((registro) => {
-    const option = document.createElement("option");
-    option.value = registro.nome;
-    option.textContent = registro.arquivada ? `${registro.nome} (arquivada)` : registro.nome;
-    select.append(option);
+    const label = document.createElement("label");
+    label.className = "opcao-turma-relatorio";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = registro.nome;
+    checkbox.dataset.turma = registro.nome;
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) turmasRelatorioSelecionadas.add(registro.nome);
+      else turmasRelatorioSelecionadas.delete(registro.nome);
+      atualizarResumo();
+    });
+    const nome = document.createElement("span");
+    nome.textContent = registro.arquivada ? `${registro.nome} (arquivada)` : registro.nome;
+    label.append(checkbox, nome);
+    lista.append(label);
   });
   const botao = document.getElementById("baixarRelatorioTurma");
-  botao.disabled = cadastroTurmas.length === 0;
+  botao.disabled = true;
+  atualizarResumo();
+
+  function atualizarResumo() {
+    const selecionadas = [...turmasRelatorioSelecionadas];
+    checkboxTodas.checked = cadastroTurmas.length > 0 && selecionadas.length === cadastroTurmas.length;
+    resumo.textContent = selecionadas.length === 0
+      ? "Escolher turmas"
+      : selecionadas.length === cadastroTurmas.length
+        ? `Todas as turmas (${selecionadas.length})`
+        : selecionadas.length === 1
+          ? selecionadas[0]
+          : `${selecionadas.length} turmas selecionadas`;
+    botao.disabled = selecionadas.length === 0;
+  }
+
   botao.addEventListener("click", async () => {
-    const turma = select.value;
+    const turmasSelecionadasParaRelatorio = [...turmasRelatorioSelecionadas];
     const de = document.getElementById("relatorioDe").value;
     const ateRelatorio = document.getElementById("relatorioAte").value;
     const formato = document.getElementById("formatoRelatorioTurma").value;
-    if (!turma || !de || !ateRelatorio || de > ateRelatorio) {
-      alert("Selecione uma turma e informe um período válido.");
+    if (!turmasSelecionadasParaRelatorio.length || !de || !ateRelatorio || de > ateRelatorio) {
+      alert("Selecione pelo menos uma turma e informe um período válido.");
       return;
     }
     botao.disabled = true;
     try {
-      await exportarRelatorioTurma({ turma, de, ate: ateRelatorio, formato });
+      await exportarRelatorioTurma({ turmas: turmasSelecionadasParaRelatorio, de, ate: ateRelatorio, formato });
     } catch (error) {
       console.error(error);
       alert("Não foi possível gerar o relatório. Recarregue a página e tente novamente.");

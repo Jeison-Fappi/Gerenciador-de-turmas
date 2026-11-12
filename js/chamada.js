@@ -101,14 +101,42 @@ function render() {
   }).join("");
 }
 
-$("#listaChamada").addEventListener("click", (e) => {
+$("#listaChamada").addEventListener("click", async (e) => {
   const b = e.target.closest(".seg button");
   if (!b) return;
   if (!aulaDaTurma(turma, dia)) return;
   const id = b.parentElement.dataset.id;
   const novo = b.dataset.st;
-  marcarStatus(id, dia, statusDoDia(id, dia) === novo ? "" : novo).catch(falhaSalvar);
-  render();
+  if (novo === "J") {
+    const notaAtual = obsDoAluno(id)[dia] || "";
+    const resultado = await Swal.fire({
+      title: "Justificativa da ausência",
+      input: "textarea",
+      inputValue: notaAtual,
+      inputPlaceholder: "Descreva o motivo da falta",
+      inputAttributes: { maxlength: 2000, "aria-label": "Justificativa da ausência" },
+      showCancelButton: true,
+      confirmButtonText: "Salvar justificativa",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#0094d6",
+      inputValidator: (valor) => valor.trim() ? undefined : "Informe a justificativa para continuar.",
+    });
+    if (!resultado.isConfirmed) return;
+    try {
+      await marcarStatus(id, dia, "J");
+      await salvarObs(id, dia, resultado.value);
+      render();
+    } catch (error) {
+      falhaSalvar(error);
+    }
+    return;
+  }
+  try {
+    await marcarStatus(id, dia, statusDoDia(id, dia) === novo ? "" : novo);
+    render();
+  } catch (error) {
+    falhaSalvar(error);
+  }
 });
 
 function marcarRestante() {
