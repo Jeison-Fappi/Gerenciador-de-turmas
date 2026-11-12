@@ -153,11 +153,15 @@ function atualizarLembretesChamada() {
   const secao = $("#lembretesChamada");
   const lista = $("#listaLembretesChamada");
   const resumo = $("#resumoLembretesChamada");
-  if (!secao || !lista || !resumo) return;
+  const botao = $("#alternarLembretesChamada");
+  const conteudo = $("#conteudoLembretesChamada");
+  if (!secao || !lista || !resumo || !botao || !conteudo) return;
 
   const pendencias = chamadasPendentes();
   secao.classList.toggle("d-none", pendencias.length === 0);
   if (!pendencias.length) {
+    botao.setAttribute("aria-expanded", "false");
+    conteudo.hidden = true;
     lista.replaceChildren();
     return;
   }
@@ -175,6 +179,14 @@ function atualizarLembretesChamada() {
     lista.append(restante);
   }
 }
+
+$("#alternarLembretesChamada").addEventListener("click", (event) => {
+  const botao = event.currentTarget;
+  const conteudo = $("#conteudoLembretesChamada");
+  const expandido = botao.getAttribute("aria-expanded") === "true";
+  botao.setAttribute("aria-expanded", String(!expandido));
+  conteudo.hidden = expandido;
+});
 
 function atualizarSistema() {
   atualizarCards();

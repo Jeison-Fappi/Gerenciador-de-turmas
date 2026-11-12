@@ -49,14 +49,17 @@
         </div>
 
         <section id="lembretesChamada" class="call-reminders d-none" aria-live="polite">
-          <div class="call-reminders-header">
+          <button id="alternarLembretesChamada" class="call-reminders-toggle" type="button" aria-expanded="false" aria-controls="conteudoLembretesChamada">
             <span class="call-reminders-icon"><i class="bi bi-bell-fill"></i></span>
-            <div>
+            <span class="call-reminders-heading">
               <strong>Chamadas pendentes</strong>
               <p id="resumoLembretesChamada">Há chamadas de dias anteriores para revisar.</p>
-            </div>
+            </span>
+            <i class="bi bi-chevron-down call-reminders-arrow" aria-hidden="true"></i>
+          </button>
+          <div id="conteudoLembretesChamada" class="call-reminders-content" hidden>
+            <div id="listaLembretesChamada" class="call-reminders-list"></div>
           </div>
-          <div id="listaLembretesChamada" class="call-reminders-list"></div>
         </section>
 
         <section class="strip">
