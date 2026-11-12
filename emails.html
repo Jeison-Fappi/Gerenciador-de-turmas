@@ -8,14 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="css/app.css" />
-    <style>
-      .email-layout { display: grid; gap: 1.25rem; }
-      .email-help { color: #526572; font-size: .92rem; }
-      .email-status { white-space: nowrap; }
-      .email-import { max-width: 520px; }
-      .email-mode { border-left: 4px solid #e0aa00; }
-      @media (min-width: 1000px) { .email-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 1rem; } }
-    </style>
+    <link rel="stylesheet" href="css/emails.css" />
   </head>
   <body>
     <div class="shell">
@@ -31,46 +24,56 @@
         <div class="side-user"><span id="userEmail"></span><button onclick="sair()"><i class="bi bi-box-arrow-right"></i> Sair</button></div>
       </aside>
       <main class="main">
-        <header class="head">
+        <header class="head emails-head">
           <div><h1>Acompanhamento por e-mail</h1><p>Gerencie destinatários e acompanhe os avisos de frequência.</p></div>
           <a class="btn-ghost" href="index.html"><i class="bi bi-arrow-left"></i> Voltar ao painel</a>
         </header>
 
-        <section class="card-x email-mode mb-4">
-          <h2 class="card-title">Modo de segurança</h2>
-          <p id="modoEmailAtual" class="mb-1">Carregando configuração…</p>
-          <p class="email-help mb-0">No modo de teste, somente alunos marcados como teste podem receber. Nenhum registro anterior à data de início é colocado na fila automaticamente.</p>
+        <section class="card-x email-mode mb-4" aria-live="polite">
+          <div class="email-mode-icon"><i class="bi bi-shield-check"></i></div>
+          <div class="email-mode-content">
+            <div class="email-mode-heading"><h2>Modo de envio</h2><span id="modoEmailAtual" class="email-mode-badge">Carregando…</span></div>
+            <p id="modoEmailDescricao" class="email-help">Os envios estão controlados pela configuração do Supabase.</p>
+          </div>
         </section>
 
         <div class="email-layout">
           <section class="card-x">
-            <div class="email-toolbar mb-3">
-              <div><h2 class="card-title mb-1">Destinatários</h2><p class="email-help mb-0">Cadastre o e-mail e marque somente o aluno sintético usado no teste.</p><button id="baixarModeloEmails" class="btn-ghost mt-2" type="button"><i class="bi bi-download"></i> Baixar planilha de alunos</button></div>
-              <div class="email-import">
-                <label class="form-label" for="arquivoEmails">Importar CSV ou Excel</label>
-                <input id="arquivoEmails" class="form-control" type="file" accept=".csv,.xlsx,.xls" />
-                <div class="form-text">Colunas: aluno_id, email, eh_teste. A importação atualiza somente os e-mails informados.</div>
+            <div class="email-panel-header">
+              <div class="email-panel-copy">
+                <h2 class="card-title mb-1">Destinatários</h2>
+                <p class="email-help mb-0">Cadastre os endereços e marque apenas o aluno sintético usado no teste.</p>
+              </div>
+              <div class="email-panel-tools">
+                <button id="baixarModeloEmails" class="btn-ghost" type="button"><i class="bi bi-download"></i> Baixar planilha</button>
+                <div class="email-import">
+                  <label class="form-label" for="arquivoEmails">Importar CSV ou Excel</label>
+                  <input id="arquivoEmails" class="form-control" type="file" accept=".csv,.xlsx,.xls" />
+                  <div class="form-text">Colunas: aluno_id, email e eh_teste. Linhas sem e-mail são ignoradas.</div>
+                </div>
               </div>
             </div>
             <div id="avisoEmails" class="small mb-3" role="status"></div>
             <div class="table-responsive">
-              <table class="tabela">
-                <thead><tr><th>Aluno</th><th>Turma</th><th>E-mail</th><th>Aluno de teste</th><th></th></tr></thead>
+              <table class="tabela email-table email-recipients-table">
+                <colgroup><col class="email-col-aluno"><col class="email-col-turma"><col class="email-col-endereco"><col class="email-col-teste"><col class="email-col-acao"></colgroup>
+                <thead><tr><th>Aluno</th><th>Turma</th><th>E-mail</th><th class="email-center">Aluno de teste</th><th class="email-center">Ação</th></tr></thead>
                 <tbody id="tabelaEmails"></tbody>
               </table>
             </div>
           </section>
 
           <section class="card-x">
-            <div class="email-toolbar mb-3">
-              <div><h2 class="card-title mb-1">Fila de envios</h2><p class="email-help mb-0">O envio está previsto para o dia seguinte à falta, às 19h (horário de Brasília).</p></div>
+            <div class="email-panel-header email-queue-header">
+              <div class="email-panel-copy"><h2 class="card-title mb-1">Fila de envios</h2><p class="email-help mb-0">Envio previsto para o dia seguinte à falta, às 19h, horário de Brasília.</p></div>
               <select id="filtroFilaEmail" class="form-select" style="max-width:220px" aria-label="Filtrar fila de e-mails">
                 <option value="ativos">Pendentes e em andamento</option><option value="todos">Todos os registros</option>
               </select>
             </div>
             <div class="table-responsive">
-              <table class="tabela">
-                <thead><tr><th>Aluno</th><th>Turma</th><th>Faltas</th><th>Tipo de aviso</th><th>Envio previsto</th><th>Status</th><th></th></tr></thead>
+              <table class="tabela email-table email-queue-table">
+                <colgroup><col class="email-col-aluno"><col class="email-col-turma"><col class="email-col-faltas"><col class="email-col-tipo"><col class="email-col-data"><col class="email-col-status"><col class="email-col-acao"></colgroup>
+                <thead><tr><th>Aluno</th><th>Turma</th><th>Faltas</th><th>Tipo de aviso</th><th>Envio previsto</th><th>Status</th><th class="email-center">Ação</th></tr></thead>
                 <tbody id="tabelaFilaEmails"></tbody>
               </table>
             </div>

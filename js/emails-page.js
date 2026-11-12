@@ -15,8 +15,8 @@ function renderizarDestinatarios() {
   $("#tabelaEmails").innerHTML = lista.map((aluno) => `<tr data-aluno="${aluno.id}">
     <td>${escapeHtmlEmail(aluno.nome)}</td><td>${escapeHtmlEmail(aluno.turma)}</td>
     <td><input class="form-control email-destinatario" type="email" value="${escapeHtmlEmail(aluno.email)}" maxlength="254" aria-label="E-mail de ${escapeHtmlEmail(aluno.nome)}"></td>
-    <td class="text-center"><input class="form-check-input email-teste" type="checkbox" ${aluno.emailTeste ? "checked" : ""} aria-label="Marcar ${escapeHtmlEmail(aluno.nome)} como aluno de teste"></td>
-    <td><button class="ibtn salvar-email" type="button" title="Salvar e-mail" aria-label="Salvar e-mail"><i class="bi bi-check2"></i></button></td>
+    <td class="email-check-cell"><input class="form-check-input email-teste" type="checkbox" ${aluno.emailTeste ? "checked" : ""} aria-label="Marcar ${escapeHtmlEmail(aluno.nome)} como aluno de teste"></td>
+    <td class="email-action-cell"><button class="ibtn email-action salvar-email" type="button" title="Salvar e-mail" aria-label="Salvar e-mail"><span class="email-save-icon"><i class="bi bi-check2"></i></span></button></td>
   </tr>`).join("") || '<tr><td colspan="5">Nenhum aluno ativo cadastrado.</td></tr>';
 
   $("#tabelaEmails").querySelectorAll(".salvar-email").forEach((button) => button.addEventListener("click", async () => {
@@ -49,9 +49,9 @@ async function carregarFilaEmail() {
   if (error) throw error;
   $("#tabelaFilaEmails").innerHTML = (data || []).map((item) => `<tr>
     <td>${escapeHtmlEmail(item.nome_aluno)}</td><td>${escapeHtmlEmail(item.turma)}</td>
-    <td>${item.total_faltas} (${item.faltas_consecutivas} seguidas)</td><td>${nomeCategoria[item.categoria] || escapeHtmlEmail(item.categoria)}</td>
-    <td>${formatarDataHora(item.agendada_para)}</td><td class="email-status">${nomeStatus[item.status] || escapeHtmlEmail(item.status)}</td>
-    <td>${item.status === "pendente" ? `<button class="ibtn cancelar-email" type="button" data-id="${item.id}" title="Cancelar envio" aria-label="Cancelar envio"><i class="bi bi-x-circle"></i></button>` : ""}</td>
+    <td>${item.total_faltas} <span class="email-help">(${item.faltas_consecutivas} seguidas)</span></td><td>${nomeCategoria[item.categoria] || escapeHtmlEmail(item.categoria)}</td>
+    <td>${formatarDataHora(item.agendada_para)}</td><td><span class="email-status-badge status-${escapeHtmlEmail(item.status)}">${nomeStatus[item.status] || escapeHtmlEmail(item.status)}</span></td>
+    <td class="email-action-cell">${item.status === "pendente" ? `<button class="ibtn email-action cancelar-email" type="button" data-id="${item.id}" title="Cancelar envio" aria-label="Cancelar envio"><i class="bi bi-x-circle"></i></button>` : "—"}</td>
   </tr>`).join("") || '<tr><td colspan="7">Nenhum envio nesta visualização.</td></tr>';
   $("#tabelaFilaEmails").querySelectorAll(".cancelar-email").forEach((button) => button.addEventListener("click", async () => {
     const confirmar = await Swal.fire({ title: "Cancelar este envio?", text: "O e-mail permanecerá no histórico com status cancelado.", icon: "question", showCancelButton: true, confirmButtonText: "Cancelar envio", cancelButtonText: "Voltar" });
@@ -118,11 +118,18 @@ async function iniciarPaginaEmails() {
     ]);
     if (erroConfig || erroEquipe) throw erroConfig || erroEquipe;
     const modo = { desativado: "Desativado", teste: "Teste: apenas destinatários marcados", producao: "Produção" }[config.modo] || config.modo;
-    $("#modoEmailAtual").textContent = `Modo atual: ${modo}${config.data_inicio ? ` · válido a partir de ${new Date(`${config.data_inicio}T12:00:00`).toLocaleDateString("pt-BR")}` : ""}`;
+    const modoBadge = $("#modoEmailAtual");
+    modoBadge.textContent = modo;
+    modoBadge.className = `email-mode-badge ${config.modo === "teste" ? "is-test" : config.modo === "producao" ? "is-production" : "is-disabled"}`;
+    $("#modoEmailDescricao").textContent = config.data_inicio
+      ? `Ativo a partir de ${new Date(`${config.data_inicio}T12:00:00`).toLocaleDateString("pt-BR")}. No modo de teste, somente destinatários marcados como teste podem receber.`
+      : "Os envios estão desativados. Nenhuma falta antiga será adicionada automaticamente à fila.";
     await carregarFilaEmail();
   } catch (error) {
     console.error(error);
-    $("#modoEmailAtual").textContent = "Não foi possível carregar a configuração. Verifique a instalação da migração SQL e as permissões da equipe.";
+    $("#modoEmailAtual").textContent = "Indisponível";
+    $("#modoEmailAtual").className = "email-mode-badge is-disabled";
+    $("#modoEmailDescricao").textContent = "Verifique a migração SQL e as permissões da equipe no Supabase.";
     mostrarAvisoEmail("Não foi possível carregar os dados da fila. Confirme a migração SQL e a política de acesso da equipe.", true);
   }
 }
