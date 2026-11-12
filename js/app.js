@@ -125,10 +125,74 @@ $("#alternarListaArquivados").addEventListener("click", () => {
   atualizarListaArquivados();
 });
 
+function chamadasPendentes() {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const pendencias = [];
+
+  for (let diasAtras = 1; diasAtras <= 30; diasAtras++) {
+    const data = new Date(hoje);
+    data.setDate(data.getDate() - diasAtras);
+    const dataChamada = dataISO(data);
+
+    for (const registro of cadastroTurmas.filter((item) => !item.arquivada)) {
+      if (!aulaDaTurma(registro.nome, dataChamada)) continue;
+      const matriculados = alunosAtivos().filter((aluno) =>
+        aluno.turma === registro.nome && (!aluno.criadoEm || aluno.criadoEm.slice(0, 10) <= dataChamada),
+      );
+      if (!matriculados.length) continue;
+
+      const semRegistro = matriculados.filter((aluno) => !["P", "F", "J"].includes(statusDoDia(aluno.id, dataChamada)));
+      if (semRegistro.length) pendencias.push({ turma: registro.nome, data: dataChamada, pendentes: semRegistro.length, total: matriculados.length });
+    }
+  }
+  return pendencias;
+}
+
+function atualizarLembretesChamada() {
+  const secao = $("#lembretesChamada");
+  const lista = $("#listaLembretesChamada");
+  const resumo = $("#resumoLembretesChamada");
+  const botao = $("#alternarLembretesChamada");
+  const conteudo = $("#conteudoLembretesChamada");
+  if (!secao || !lista || !resumo || !botao || !conteudo) return;
+
+  const pendencias = chamadasPendentes();
+  secao.classList.toggle("d-none", pendencias.length === 0);
+  if (!pendencias.length) {
+    botao.setAttribute("aria-expanded", "false");
+    conteudo.hidden = true;
+    lista.replaceChildren();
+    return;
+  }
+
+  resumo.textContent = `${pendencias.length} chamada(s) de dias de aula anteriores precisam ser concluídas ou revisadas.`;
+  lista.innerHTML = pendencias.slice(0, 10).map((item) => {
+    const data = new Date(`${item.data}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+    const destino = `chamada.html?turma=${encodeURIComponent(item.turma)}&data=${item.data}`;
+    return `<article class="call-reminder-item"><div><strong>${esc(item.turma)}</strong><span>${esc(data)} · ${item.pendentes} de ${item.total} aluno(s) sem registro</span></div><a class="btn-blue" href="${destino}">Completar chamada</a></article>`;
+  }).join("");
+  if (pendencias.length > 10) {
+    const restante = document.createElement("p");
+    restante.className = "call-reminders-more";
+    restante.textContent = `Mais ${pendencias.length - 10} chamada(s) pendente(s) nos últimos 30 dias.`;
+    lista.append(restante);
+  }
+}
+
+$("#alternarLembretesChamada").addEventListener("click", (event) => {
+  const botao = event.currentTarget;
+  const conteudo = $("#conteudoLembretesChamada");
+  const expandido = botao.getAttribute("aria-expanded") === "true";
+  botao.setAttribute("aria-expanded", String(!expandido));
+  conteudo.hidden = expandido;
+});
+
 function atualizarSistema() {
   atualizarCards();
   aplicarFiltros();
   atualizarListaArquivados();
+  atualizarLembretesChamada();
 }
 
 function popularTurmas() {

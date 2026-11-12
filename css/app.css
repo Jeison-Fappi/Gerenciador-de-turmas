@@ -251,4 +251,25 @@ body.foto-lightbox-aberto{overflow:hidden}
 .tabela-arquivados .avatar-arquivado{background:#e4e9ed;color:#667784}
 .badge-arquivado{display:inline-flex;align-items:center;margin-left:8px;padding:3px 8px;border-radius:999px;background:#e9eef1;color:#627482;font-size:11px;font-weight:700}
 .btn-reativar{padding:7px 10px;font-size:12px}
+
+/* Lembretes de chamadas pendentes */
+.call-reminders{margin:0 0 20px;padding:18px 20px;border:1px solid #f0d28a;border-left:4px solid var(--warn);border-radius:14px;background:var(--warn-bg)}
+.call-reminders-toggle{display:flex;align-items:center;gap:12px;width:100%;padding:0;border:0;background:transparent;color:var(--ink);text-align:left;cursor:pointer}
+.call-reminders-icon{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:11px;background:#fff;color:var(--warn);font-size:16px}
+.call-reminders-heading{display:block;min-width:0}
+.call-reminders-heading strong{display:block;font-size:15px}
+.call-reminders-heading p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.call-reminders-arrow{flex:none;margin-left:auto;color:var(--warn);transition:transform .18s ease}
+.call-reminders-toggle[aria-expanded="true"] .call-reminders-arrow{transform:rotate(180deg)}
+.call-reminders-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:6px}
+.call-reminders-content{margin-top:12px}
+.call-reminders-content[hidden]{display:none}
+.call-reminders-list{display:grid;gap:8px}
+.call-reminder-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 12px;border:1px solid #ead9b4;border-radius:10px;background:rgba(255,255,255,.72)}
+.call-reminder-item>div{display:grid;gap:3px}
+.call-reminder-item>div strong{font-size:13px}
+.call-reminder-item>div span{color:var(--muted);font-size:12px;text-transform:capitalize}
+.call-reminder-item .btn-blue{flex:none;padding:9px 13px;font-size:12px}
+.call-reminders-more{margin:3px 0 0;color:var(--muted);font-size:12px}
+@media(max-width:575px){.call-reminder-item{align-items:flex-start;flex-direction:column}.call-reminder-item .btn-blue{width:100%;justify-content:center}}
 @media(max-width:575px){.arquivados-toolbar{align-items:flex-start;flex-direction:column}.badge-arquivado{margin-left:0}}

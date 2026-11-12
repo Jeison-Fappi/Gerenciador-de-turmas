@@ -56,7 +56,7 @@ async function buscarTudo(tabela, ordem) {
   return todas;
 }
 
-const doBanco = (r) => ({ id: r.id, nome: r.nome, turma: r.turma, faltasAnteriores: r.faltas_anteriores, arquivado: Boolean(r.arquivado) });
+const doBanco = (r) => ({ id: r.id, nome: r.nome, turma: r.turma, faltasAnteriores: r.faltas_anteriores, arquivado: Boolean(r.arquivado), criadoEm: r.criado_em || "" });
 const FALTAS_ALERTA = 7;
 const FALTAS_RISCO = 10;
 const alunosAtivos = () => alunos.filter((aluno) => !aluno.arquivado);
