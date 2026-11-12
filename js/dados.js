@@ -6,6 +6,7 @@ const sb = configurado ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
 
 let usuarioEmail = "";
 let alunos = [];
+let emailsAlunos = {};
 let turmas = [];
 let cadastroTurmas = [];
 let excecoesAula = [];
@@ -63,15 +64,22 @@ const alunosAtivos = () => alunos.filter((aluno) => !aluno.arquivado);
 const porNome = (a, b) => a.nome.localeCompare(b.nome, "pt-BR");
 
 async function carregarDados() {
-  const [a, p, o, t, e] = await Promise.all([
+  const [a, p, o, t, e, emails] = await Promise.all([
     buscarTudo("alunos", ["nome"]),
     buscarTudo("presencas", ["data", "aluno_id"]),
     buscarTudo("observacoes", ["data", "aluno_id"]),
     buscarTudo("turmas", ["nome"]),
     buscarTudo("excecoes_aula", ["data", "turma"]),
+    buscarTudo("alunos_emails", ["aluno_id"]),
   ]);
 
   alunos = a.map(doBanco);
+  emailsAlunos = Object.fromEntries(emails.map((registro) => [registro.aluno_id, registro]));
+  alunos.forEach((aluno) => {
+    const registro = emailsAlunos[aluno.id];
+    aluno.email = registro?.email || "";
+    aluno.emailTeste = Boolean(registro?.eh_teste);
+  });
   cadastroTurmas = t;
   turmas = t.filter((r) => !r.arquivada).map((r) => r.nome);
   excecoesAula = e;
@@ -144,7 +152,7 @@ async function restaurarAgendaAula(turma, data) {
 }
 
 // ---------- Alunos ----------
-async function criarAluno(nome, turma, faltasAnteriores = 0) {
+async function criarAluno(nome, turma, faltasAnteriores = 0, email = "") {
   const { data, error } = await sb
     .from("alunos")
     .insert({ nome, turma, faltas_anteriores: faltasAnteriores })
@@ -154,6 +162,9 @@ async function criarAluno(nome, turma, faltasAnteriores = 0) {
   const novo = doBanco(data);
   alunos.push(novo);
   alunos.sort(porNome);
+  novo.email = "";
+  novo.emailTeste = false;
+  if (email.trim()) await salvarEmailAluno(novo.id, email, false);
   return novo;
 }
 
@@ -177,7 +188,47 @@ async function atualizarAluno(a) {
     .update({ nome: a.nome, turma: a.turma, faltas_anteriores: a.faltasAnteriores })
     .eq("id", a.id);
   if (error) throw error;
+  await salvarEmailAluno(a.id, a.email || "", Boolean(a.emailTeste));
   alunos.sort(porNome);
+}
+
+async function salvarEmailAluno(alunoId, email, ehTeste = false) {
+  const valor = String(email || "").trim().toLowerCase();
+  if (!valor) {
+    const { error } = await sb.from("alunos_emails").delete().eq("aluno_id", alunoId);
+    if (error) throw error;
+    delete emailsAlunos[alunoId];
+  } else {
+    const { data, error } = await sb.from("alunos_emails")
+      .upsert({ aluno_id: alunoId, email: valor, eh_teste: Boolean(ehTeste) }, { onConflict: "aluno_id" })
+      .select()
+      .single();
+    if (error) throw error;
+    emailsAlunos[alunoId] = data;
+  }
+  const aluno = alunos.find((registro) => registro.id === alunoId);
+  if (aluno) {
+    aluno.email = valor;
+    aluno.emailTeste = Boolean(valor && ehTeste);
+  }
+}
+
+async function salvarEmailsEmLote(registros) {
+  for (let inicio = 0; inicio < registros.length; inicio += 250) {
+    const lote = registros.slice(inicio, inicio + 250);
+    const { data, error } = await sb.from("alunos_emails")
+      .upsert(lote, { onConflict: "aluno_id" })
+      .select();
+    if (error) throw error;
+    data.forEach((registro) => { emailsAlunos[registro.aluno_id] = registro; });
+  }
+  registros.forEach((registro) => {
+    const aluno = alunos.find((item) => item.id === registro.aluno_id);
+    if (aluno) {
+      aluno.email = registro.email;
+      aluno.emailTeste = Boolean(registro.eh_teste);
+    }
+  });
 }
 
 async function atualizarArquivoAluno(id, arquivado) {

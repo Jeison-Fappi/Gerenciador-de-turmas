@@ -509,16 +509,19 @@ async function cadastrarAluno() {
   const modal = $("#modalNovo");
   const inputNome = $("#nomeAluno");
   const inputTurma = $("#turmaAluno");
+  const inputEmail = $("#emailAluno");
   const nome = inputNome.value.trim();
+  const email = inputEmail.value.trim();
   limparErros(modal);
 
   if (nome === "") return erroCampo(inputNome, "Digite o nome do aluno.");
   if (inputTurma.value === "") return erroCampo(inputTurma, "Selecione uma turma.");
+  if (email && !inputEmail.checkValidity()) return erroCampo(inputEmail, "Informe um e-mail válido.");
   if (alunos.some((a) => a.nome.toLowerCase() === nome.toLowerCase()))
     return erroCampo(inputNome, "Esse aluno já está cadastrado.");
 
   try {
-    await criarAluno(nome, inputTurma.value);
+    await criarAluno(nome, inputTurma.value, 0, email);
   } catch (e) {
     if (e && e.code === "23505") return erroCampo(inputNome, "Esse aluno já está cadastrado.");
     return falhaSalvar(e);
@@ -526,6 +529,7 @@ async function cadastrarAluno() {
   atualizarSistema();
 
   inputNome.value = "";
+  inputEmail.value = "";
   inputTurma.selectedIndex = 0;
   bootstrap.Modal.getInstance(modal).hide();
   toast("success", "Aluno cadastrado");
@@ -544,20 +548,25 @@ function abrirEdicao(id) {
   $("#editarNome").value = alunoEditando.nome;
   $("#editarTurma").value = alunoEditando.turma;
   $("#editarFaltasAnt").value = alunoEditando.faltasAnteriores || 0;
+  $("#editarEmailAluno").value = alunoEditando.email || "";
   bootstrap.Modal.getOrCreateInstance($("#modalEditar")).show();
 }
 
 async function salvarEdicao() {
   const nome = $("#editarNome").value.trim();
   const turma = $("#editarTurma").value;
+  const inputEmail = $("#editarEmailAluno");
+  const email = inputEmail.value.trim();
   limparErros($("#modalEditar"));
 
   if (nome === "") return erroCampo($("#editarNome"), "Digite o nome do aluno.");
   if (turma === "") return erroCampo($("#editarTurma"), "Selecione uma turma.");
+  if (email && !inputEmail.checkValidity()) return erroCampo(inputEmail, "Informe um e-mail válido.");
 
   alunoEditando.nome = nome;
   alunoEditando.turma = turma;
   alunoEditando.faltasAnteriores = Math.max(0, parseInt($("#editarFaltasAnt").value) || 0);
+  alunoEditando.email = email;
   try {
     await atualizarAluno(alunoEditando);
   } catch (e) {

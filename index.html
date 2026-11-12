@@ -21,6 +21,7 @@
           <a class="nav-i" href="chamada.html"><i class="bi bi-clipboard2-check-fill"></i> Chamada</a>
           <a class="nav-i" href="graficos.html"><i class="bi bi-bar-chart-line-fill"></i> Gráficos</a>
           <a class="nav-i" href="fotos.html"><i class="bi bi-images"></i> Fotos</a>
+          <a class="nav-i" href="emails.html"><i class="bi bi-envelope-fill"></i> E-mails</a>
         </nav>
       <div class="side-user"><span id="userEmail"></span><button onclick="sair()"><i class="bi bi-box-arrow-right"></i> Sair</button></div>
       </aside>
@@ -147,6 +148,11 @@
             <select id="turmaAluno" class="form-select"><option value="">Selecione a turma</option></select>
             <div class="invalid-feedback"></div>
           </div>
+          <div class="mt-3">
+            <label class="form-label" for="emailAluno">E-mail do aluno</label>
+            <input id="emailAluno" type="email" maxlength="254" class="form-control" placeholder="aluno@exemplo.com" />
+            <div class="invalid-feedback"></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
@@ -213,6 +219,11 @@
             <label class="form-label">Faltas anteriores (sem data)</label>
             <input id="editarFaltasAnt" type="number" min="0" class="form-control" />
             <div class="form-text">Faltas registradas antes da chamada por dia. Pode zerar se quiser.</div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label" for="editarEmailAluno">E-mail do aluno</label>
+            <input id="editarEmailAluno" type="email" maxlength="254" class="form-control" placeholder="aluno@exemplo.com" />
+            <div class="invalid-feedback"></div>
           </div>
         </div>
         <div class="modal-footer">
