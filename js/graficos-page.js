@@ -4,6 +4,7 @@ let dados = [];
 const COR = { regular: "#008542", atencao: "#f18b21", risco: "#c90969", marca: "#0094d6", apagado: "#c9dbe6" };
 const graficos = {};
 let turmasSelecionadas = null;
+let turmasRelatorioSelecionadas = new Set();
 
 const turmaSelecionada = (nome) => turmasSelecionadas === null || turmasSelecionadas.has(nome);
 
@@ -125,33 +126,58 @@ function renderizar() {
 }
 
 function configurarRelatorioTurma() {
-  const select = document.getElementById("turmaRelatorio");
+  const lista = document.getElementById("turmaRelatorio");
+  const resumo = document.getElementById("resumoTurmasRelatorio");
   const hoje = new Date();
   const inicioAno = `${hoje.getFullYear()}-01-01`;
   const ate = dataISO(hoje);
   document.getElementById("relatorioDe").value = inicioAno;
   document.getElementById("relatorioAte").value = ate;
-  select.replaceChildren();
+  lista.replaceChildren();
   cadastroTurmas.forEach((registro) => {
-    const option = document.createElement("option");
-    option.value = registro.nome;
-    option.textContent = registro.arquivada ? `${registro.nome} (arquivada)` : registro.nome;
-    select.append(option);
+    const label = document.createElement("label");
+    label.className = "opcao-turma-relatorio";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = registro.nome;
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) turmasRelatorioSelecionadas.add(registro.nome);
+      else turmasRelatorioSelecionadas.delete(registro.nome);
+      atualizarResumo();
+    });
+    const nome = document.createElement("span");
+    nome.textContent = registro.arquivada ? `${registro.nome} (arquivada)` : registro.nome;
+    label.append(checkbox, nome);
+    lista.append(label);
   });
   const botao = document.getElementById("baixarRelatorioTurma");
-  botao.disabled = cadastroTurmas.length === 0;
+  botao.disabled = true;
+  atualizarResumo();
+
+  function atualizarResumo() {
+    const selecionadas = [...turmasRelatorioSelecionadas];
+    resumo.textContent = selecionadas.length === 0
+      ? "Escolher turmas"
+      : selecionadas.length === cadastroTurmas.length
+        ? `Todas as turmas (${selecionadas.length})`
+        : selecionadas.length === 1
+          ? selecionadas[0]
+          : `${selecionadas.length} turmas selecionadas`;
+    botao.disabled = selecionadas.length === 0;
+  }
+
   botao.addEventListener("click", async () => {
-    const turma = select.value;
+    const turmasSelecionadasParaRelatorio = [...turmasRelatorioSelecionadas];
     const de = document.getElementById("relatorioDe").value;
     const ateRelatorio = document.getElementById("relatorioAte").value;
     const formato = document.getElementById("formatoRelatorioTurma").value;
-    if (!turma || !de || !ateRelatorio || de > ateRelatorio) {
-      alert("Selecione uma turma e informe um período válido.");
+    if (!turmasSelecionadasParaRelatorio.length || !de || !ateRelatorio || de > ateRelatorio) {
+      alert("Selecione pelo menos uma turma e informe um período válido.");
       return;
     }
     botao.disabled = true;
     try {
-      await exportarRelatorioTurma({ turma, de, ate: ateRelatorio, formato });
+      await exportarRelatorioTurma({ turmas: turmasSelecionadasParaRelatorio, de, ate: ateRelatorio, formato });
     } catch (error) {
       console.error(error);
       alert("Não foi possível gerar o relatório. Recarregue a página e tente novamente.");

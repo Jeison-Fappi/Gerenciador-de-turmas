@@ -50,6 +50,15 @@ h1,h2,strong,.side-brand{font-family:Arial,system-ui,sans-serif}
 .btn-ghost:hover{border-color:var(--blue);color:var(--blue-dark)}
 .btn-ghost.btn-delete{color:#c90969}
 .btn-ghost.btn-delete:hover{border-color:#c90969;background:#fff5f8;color:#a50755}
+.seletor-turmas-relatorio{position:relative}
+.seletor-turmas-relatorio summary{list-style:none;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);padding:10px 40px 10px 14px;font-weight:600;cursor:pointer;position:relative}
+.seletor-turmas-relatorio summary::-webkit-details-marker{display:none}
+.seletor-turmas-relatorio summary::after{content:"";position:absolute;right:16px;top:13px;width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
+.seletor-turmas-relatorio[open] summary::after{top:17px;transform:rotate(225deg)}
+.lista-turmas-relatorio{position:absolute;z-index:20;top:calc(100% + 5px);left:0;right:0;max-height:250px;overflow:auto;padding:8px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 24px rgba(23,41,56,.14)}
+.opcao-turma-relatorio{display:flex;align-items:center;gap:9px;padding:8px;border-radius:7px;cursor:pointer}
+.opcao-turma-relatorio:hover{background:#f2f8fb}
+.opcao-turma-relatorio input{accent-color:var(--blue)}
 
 /* Faixa de números */
 .strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}

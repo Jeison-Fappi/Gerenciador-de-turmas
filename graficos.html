@@ -37,10 +37,10 @@
         <div id="aviso" class="card-x vazio d-none"></div>
 
           <section class="card-x pad mt">
-            <h2 class="card-title">Relatório completo da turma</h2>
+            <h2 class="card-title">Relatório completo por turma</h2>
             <p class="text-muted">Exporte frequência, faltas contextualizadas, justificativas e observações dos alunos no período.</p>
             <div class="row g-2 align-items-end">
-              <div class="col-md-4"><label class="form-label" for="turmaRelatorio">Turma</label><select id="turmaRelatorio" class="form-select"></select></div>
+              <div class="col-md-4"><label class="form-label">Turmas do relatório</label><details class="seletor-turmas-relatorio"><summary id="resumoTurmasRelatorio">Selecionar turmas</summary><div id="turmaRelatorio" class="lista-turmas-relatorio"></div></details></div>
               <div class="col-md-2"><label class="form-label" for="relatorioDe">De</label><input id="relatorioDe" type="date" class="form-control" /></div>
               <div class="col-md-2"><label class="form-label" for="relatorioAte">Até</label><input id="relatorioAte" type="date" class="form-control" /></div>
               <div class="col-md-2"><label class="form-label" for="formatoRelatorioTurma">Formato</label><select id="formatoRelatorioTurma" class="form-select"><option value="pdf">PDF</option><option value="xlsx">Excel</option><option value="csv">CSV</option></select></div>
