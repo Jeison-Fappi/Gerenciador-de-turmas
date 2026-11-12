@@ -3,8 +3,12 @@
 
 const $ = (s) => document.querySelector(s);
 
-let dia = dataISO();
-let turma = "";
+const parametrosChamada = new URLSearchParams(location.search);
+const dataSolicitada = parametrosChamada.get("data") || "";
+let dia = /^\d{4}-\d{2}-\d{2}$/.test(dataSolicitada) && !Number.isNaN(new Date(`${dataSolicitada}T12:00:00`).getTime())
+  ? dataSolicitada
+  : dataISO();
+let turma = parametrosChamada.get("turma") || "";
 
 const selTurma = $("#turmaChamada");
 selTurma.addEventListener("change", () => { turma = selTurma.value; render(); });
@@ -125,7 +129,7 @@ function marcarRestante() {
       option.textContent = nome;
       selTurma.append(option);
     });
-    turma = turmas[0];
+    if (!turmas.includes(turma)) turma = turmas[0];
     selTurma.value = turma;
   } else {
     selTurma.innerHTML = '<option value="">Nenhuma turma cadastrada</option>';
