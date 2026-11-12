@@ -134,12 +134,35 @@ function configurarRelatorioTurma() {
   document.getElementById("relatorioDe").value = inicioAno;
   document.getElementById("relatorioAte").value = ate;
   lista.replaceChildren();
+  const opcaoTodas = document.createElement("label");
+  opcaoTodas.className = "opcao-turma-relatorio";
+  const checkboxTodas = document.createElement("input");
+  checkboxTodas.type = "checkbox";
+  checkboxTodas.disabled = cadastroTurmas.length === 0;
+  checkboxTodas.addEventListener("change", () => {
+    turmasRelatorioSelecionadas = checkboxTodas.checked
+      ? new Set(cadastroTurmas.map((registro) => registro.nome))
+      : new Set();
+    lista.querySelectorAll("input[data-turma]").forEach((checkbox) => {
+      checkbox.checked = turmasRelatorioSelecionadas.has(checkbox.dataset.turma);
+    });
+    atualizarResumo();
+  });
+  const nomeTodas = document.createElement("span");
+  nomeTodas.textContent = "Todas as turmas";
+  opcaoTodas.append(checkboxTodas, nomeTodas);
+  lista.append(opcaoTodas);
+  const separador = document.createElement("div");
+  separador.className = "separador-turmas-relatorio";
+  lista.append(separador);
+
   cadastroTurmas.forEach((registro) => {
     const label = document.createElement("label");
     label.className = "opcao-turma-relatorio";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.value = registro.nome;
+    checkbox.dataset.turma = registro.nome;
     checkbox.addEventListener("change", () => {
       if (checkbox.checked) turmasRelatorioSelecionadas.add(registro.nome);
       else turmasRelatorioSelecionadas.delete(registro.nome);
@@ -156,6 +179,7 @@ function configurarRelatorioTurma() {
 
   function atualizarResumo() {
     const selecionadas = [...turmasRelatorioSelecionadas];
+    checkboxTodas.checked = cadastroTurmas.length > 0 && selecionadas.length === cadastroTurmas.length;
     resumo.textContent = selecionadas.length === 0
       ? "Escolher turmas"
       : selecionadas.length === cadastroTurmas.length

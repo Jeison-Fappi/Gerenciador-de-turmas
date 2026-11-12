@@ -59,6 +59,7 @@ h1,h2,strong,.side-brand{font-family:Arial,system-ui,sans-serif}
 .opcao-turma-relatorio{display:flex;align-items:center;gap:9px;padding:8px;border-radius:7px;cursor:pointer}
 .opcao-turma-relatorio:hover{background:#f2f8fb}
 .opcao-turma-relatorio input{accent-color:var(--blue)}
+.separador-turmas-relatorio{border-top:1px solid var(--line);margin:4px 8px}
 
 /* Faixa de números */
 .strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
