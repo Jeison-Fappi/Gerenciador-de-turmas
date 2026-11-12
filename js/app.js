@@ -356,10 +356,66 @@ function renderizarTurmas() {
     arquivar.className = "btn-ghost";
     arquivar.textContent = registro.arquivada ? "Reativar" : "Arquivar";
     arquivar.addEventListener("click", () => alternarArquivoTurma(registro));
-    acoes.append(editar, arquivar);
+    const excluir = document.createElement("button");
+    excluir.type = "button";
+    excluir.className = "btn-ghost btn-delete";
+    excluir.textContent = "Excluir";
+    excluir.addEventListener("click", () => excluirTurma(registro));
+    acoes.append(editar, arquivar, excluir);
     item.append(info, acoes);
     lista.append(item);
   });
+}
+
+async function excluirTurma(registro) {
+  try {
+    const [{ count: totalAlunos, error: erroAlunos }, { count: totalFotos, error: erroFotos }] = await Promise.all([
+      sb.from("alunos").select("id", { count: "exact", head: true }).eq("turma", registro.nome),
+      sb.from("fotos_turma").select("id", { count: "exact", head: true }).eq("turma", registro.nome),
+    ]);
+    if (erroAlunos) throw erroAlunos;
+    if (erroFotos) throw erroFotos;
+
+    if (totalAlunos || totalFotos) {
+      const detalhes = [
+        totalAlunos ? `${totalAlunos} aluno(s) vinculado(s)` : "",
+        totalFotos ? `${totalFotos} foto(s) armazenada(s)` : "",
+      ].filter(Boolean).join(" e ");
+      await Swal.fire({
+        title: "Não é possível excluir esta turma",
+        text: `Há ${detalhes}. Arquive a turma para preservar os dados e o histórico.`,
+        icon: "info",
+        confirmButtonText: "Entendi",
+      });
+      return;
+    }
+
+    const resultado = await Swal.fire({
+      title: `Excluir ${esc(registro.nome)}?`,
+      text: "A exclusão é permanente. Exceções de calendário desta turma também serão removidas.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Excluir turma",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#c90969",
+    });
+    if (!resultado.isConfirmed) return;
+
+    await removerTurmaDoBanco(registro.nome);
+    popularTurmas();
+    renderizarTurmas();
+    atualizarSistema();
+    toast("success", "Turma excluída");
+  } catch (error) {
+    console.error(error);
+    const bloqueada = error.code === "23503";
+    await Swal.fire({
+      title: "Não foi possível excluir a turma",
+      text: bloqueada ? "Há dados vinculados a esta turma. Arquive-a para preservar o histórico." : "Verifique a conexão e tente novamente.",
+      icon: "error",
+      confirmButtonText: "Fechar",
+    });
+  }
 }
 
 let turmaEmEdicao = null;

@@ -3,7 +3,9 @@
 let dados = [];
 const COR = { regular: "#008542", atencao: "#f18b21", risco: "#c90969", marca: "#0094d6", apagado: "#c9dbe6" };
 const graficos = {};
-let turmaAtual = "TODAS";
+let turmasSelecionadas = null;
+
+const turmaSelecionada = (nome) => turmasSelecionadas === null || turmasSelecionadas.has(nome);
 
 const situacao = (f) => (f >= FALTAS_RISCO ? "risco" : f >= FALTAS_ALERTA ? "atencao" : "regular");
 
@@ -22,11 +24,27 @@ function desenhar(id, config) {
 function desenharChips() {
   const box = document.getElementById("chips");
   box.innerHTML = ["TODAS", ...turmas]
-    .map((t) => `<button class="pill ${t === turmaAtual ? "on" : ""}" data-turma="${t}">${t === "TODAS" ? "Todas as turmas" : t}</button>`)
+    .map((t) => {
+      const ativa = t === "TODAS" ? turmasSelecionadas === null : turmaSelecionada(t);
+      const rotulo = t === "TODAS" ? "Todas as turmas" : esc(t);
+      return `<button type="button" class="pill ${ativa ? "on" : ""}" data-turma="${esc(t)}" aria-pressed="${ativa}">${rotulo}</button>`;
+    })
     .join("");
   box.querySelectorAll(".pill").forEach((b) =>
     b.addEventListener("click", () => {
-      turmaAtual = b.dataset.turma;
+      const turma = b.dataset.turma;
+      if (turma === "TODAS") {
+        turmasSelecionadas = null;
+      } else {
+        if (turmasSelecionadas === null) turmasSelecionadas = new Set(turmas);
+        if (turmasSelecionadas.has(turma)) {
+          if (turmasSelecionadas.size === 1) return;
+          turmasSelecionadas.delete(turma);
+        } else {
+          turmasSelecionadas.add(turma);
+        }
+        if (turmasSelecionadas.size === turmas.length) turmasSelecionadas = null;
+      }
       desenharChips();
       renderizar();
     }),
@@ -34,7 +52,7 @@ function desenharChips() {
 }
 
 function renderizar() {
-  const lista = dados.filter((a) => turmaAtual === "TODAS" || a.turma === turmaAtual);
+  const lista = dados.filter((a) => turmaSelecionada(a.turma));
   const total = lista.reduce((s, a) => s + a.faltas, 0);
 
   document.getElementById("kAlunos").innerText = lista.length;
@@ -46,8 +64,11 @@ function renderizar() {
 
   //Faltas por turma
   const porTurma = {};
-  turmas.forEach((t) => (porTurma[t] = 0));
-  dados.forEach((a) => (porTurma[a.turma] = (porTurma[a.turma] || 0) + a.faltas));
+  const nomesSelecionados = turmasSelecionadas === null
+    ? [...new Set([...turmas, ...dados.map((a) => a.turma)])]
+    : turmas.filter((t) => turmasSelecionadas.has(t));
+  nomesSelecionados.forEach((t) => (porTurma[t] = 0));
+  lista.forEach((a) => (porTurma[a.turma] = (porTurma[a.turma] || 0) + a.faltas));
   const nomes = Object.keys(porTurma);
 
   desenhar("graficoTurmas", {
@@ -56,7 +77,7 @@ function renderizar() {
       labels: nomes,
       datasets: [{
         data: nomes.map((n) => porTurma[n]),
-        backgroundColor: nomes.map((n) => (turmaAtual === "TODAS" || n === turmaAtual ? COR.marca : COR.apagado)),
+        backgroundColor: nomes.map(() => COR.marca),
         borderRadius: 8,
         maxBarThickness: 56,
       }],

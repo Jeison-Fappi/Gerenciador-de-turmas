@@ -48,6 +48,8 @@ h1,h2,strong,.side-brand{font-family:Arial,system-ui,sans-serif}
 .btn-blue:hover{background:var(--blue-dark);color:#fff}
 .btn-ghost{background:#fff;color:var(--ink);border-color:var(--line)}
 .btn-ghost:hover{border-color:var(--blue);color:var(--blue-dark)}
+.btn-ghost.btn-delete{color:#c90969}
+.btn-ghost.btn-delete:hover{border-color:#c90969;background:#fff5f8;color:#a50755}
 
 /* Faixa de números */
 .strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}

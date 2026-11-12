@@ -109,6 +109,13 @@ async function arquivarTurma(nome, arquivada) {
   ordenarCadastroTurmas();
 }
 
+async function removerTurmaDoBanco(nome) {
+  const { error } = await sb.from("turmas").delete().eq("nome", nome);
+  if (error) throw error;
+  cadastroTurmas = cadastroTurmas.filter((registro) => registro.nome !== nome);
+  ordenarCadastroTurmas();
+}
+
 function excecaoAula(turma, data) {
   return excecoesAula.find((r) => r.turma === turma && r.data === data) || null;
 }
